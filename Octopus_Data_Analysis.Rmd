@@ -29,4 +29,9 @@ Reformatting time to POSIX class to make it easier to calc times.
 events$realtime=strptime(paste(events$Date,events$Time),format="%m/%d/%Y %H:%M:%S")
 ```
 
+# Extracting visitation durations
+```{r}
+events$realtime[events$Species=="octopus_rubescens"&events$Behavior=="frame_arrival"]
+events$realtime[events$Species=="octopus_rubescens"&events$Behavior=="frame_departure"]
+```
 
