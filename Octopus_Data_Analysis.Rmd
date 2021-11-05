@@ -29,8 +29,3 @@ Reformatting time to POSIX class to make it easier to calc times.
 events$realtime=strptime(paste(events$Date,events$Time),format="%m/%d/%Y %H:%M:%S")
 ```
 
-
-```{r}
-x="test"
-```
-
