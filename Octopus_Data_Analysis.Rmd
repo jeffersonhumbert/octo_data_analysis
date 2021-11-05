@@ -6,6 +6,27 @@ output: html_document
 ---
 
 ```{r}
-print("Hello World")
+library(googlesheets4)
+library(googledrive)
 ```
+
+
+Pulling data from google sheets.
+```{r}
+drive_auth()
+gs4_auth(token = drive_token())
+sheetID="1D53PFAokXS4kHfwSc9riEdKFo8T46GfQxjyo5PEWJg4"
+events=read_sheet(sheetID,"event_log",col_types="icccccccccccc")
+```
+
+Cleaning out unfilled rows.
+```{r}
+events=events[complete.cases(events$Event_type),]
+```
+
+Reformatting time to POSIX class to make it easier to calc times.
+```{r}
+events$realtime=strptime(paste(events$Date,events$Time),format="%m/%d/%Y %H:%M:%S")
+```
+
 
