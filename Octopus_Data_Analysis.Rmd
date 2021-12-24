@@ -8,13 +8,20 @@ output: html_document
 ```{r}
 library(googlesheets4)
 library(googledrive)
+library(lubridate)
+library(maptools)
+library(circular)
+library(plotrix)
 ```
 
+Getting google sheets authorization (run at least once before knitting)
+```{r eval=FALSE}
+drive_auth()
+gs4_auth(token = drive_token())
+```
 
 Pulling data from google sheets.
 ```{r}
-drive_auth()
-gs4_auth(token = drive_token())
 sheetID="1D53PFAokXS4kHfwSc9riEdKFo8T46GfQxjyo5PEWJg4"
 events=read_sheet(sheetID,"event_log",col_types="icccccccccccc")
 ```
@@ -25,16 +32,380 @@ events=events[complete.cases(events$Event_type),]
 ```
 
 Reformatting time to POSIX class to make it easier to calc times.
+There seems to be two different formats for dates used in the dataset, so I run this command twice.
 ```{r}
 events$realtime=strptime(paste(events$Date,events$Time),format="%m/%d/%Y %H:%M:%S")
+events$realtime[is.na(events$realtime)]=strptime(paste(events$Date[is.na(events$realtime)],events$Time[is.na(events$realtime)]),format="%Y/%m/%d %H:%M:%S")
+
 ```
 
 
-# Extracting visitation durations
+
+# Den Use Dynamics
+
+Things that were to be tested per the proposal:
+
+#. Mean visitation duration
+#. Mean excursion duration
+#. Day vs. Night visitation duration (t-test)
+#. Day vs. night excursion duration (t-test)
+
+Things I think might be good that wasn't actually proposed
+
+#. Frequency of excursions day vs. night (chi-square)
+
+## Making the visitation dataframe
+```{r}
+visit=data.frame(deployment=as.numeric(NA),
+           octoID=as.character(NA),
+           time=as.POSIXct(NA),
+           duration=as.numeric(NA))
+
+excursion=data.frame(deployment=as.numeric(NA),
+           octoID=as.character(NA),
+           time=as.POSIXct(NA),
+           duration=as.numeric(NA))
+
+badarrival=data.frame(deployment=as.numeric(NA),
+           octoID=as.character(NA),
+           time1=as.POSIXct(NA),
+           time2=as.POSIXct(NA),
+           duration=as.numeric(NA))
+
+baddepar=data.frame(deployment=as.numeric(NA),
+           octoID=as.character(NA),
+           time1=as.POSIXct(NA),
+           time2=as.POSIXct(NA),
+           duration=as.numeric(NA))
+```
+
+
+
+## Extracting visitation durations
 ```{r}
 
-events$realtime[events$Species=="octopus_rubescens"&events$Event_type=="resident non-interaction"&events$Behavior=="frame_arrival"]
-events$realtime[events$Species=="octopus_rubescens"&events$Event_type=="resident non-interaction"&events$Behavior=="frame_departure"]
+deployments=unique(events$`Deployment #`)
+
+
+for (i in 1:length(deployments)){
+  arrivals=events$realtime[events$Species=="octopus_rubescens"&
+                    events$Event_type=="resident non-interaction"&
+                    events$Behavior=="frame_arrival"&
+                    events$`Deployment #`==deployments[i]]
+
+  arrivals.ID=events$OctoID[events$Species=="octopus_rubescens"&
+                    events$Event_type=="resident non-interaction"&
+                    events$Behavior=="frame_arrival"&
+                    events$`Deployment #`==deployments[i]]
+
+  departures=events$realtime[events$Species=="octopus_rubescens"&
+                    events$Event_type=="resident non-interaction"&
+                    events$Behavior=="frame_departure"&
+                    events$`Deployment #`==deployments[i]]
+
+  departures.ID=events$OctoID[events$Species=="octopus_rubescens"&
+                    events$Event_type=="resident non-interaction"&
+                    events$Behavior=="frame_departure"&
+                    events$`Deployment #`==deployments[i]]
+
+  depar.tags=c(rep("arrive",length(arrivals)),rep("depart",length(departures)))
+
+  deploy.sub=data.frame(time=c(arrivals,departures),octoID=c(arrivals.ID,departures.ID),type=depar.tags)
+  deploy.sub=deploy.sub[order(deploy.sub$time),]
+
+  octos.present=unique(deploy.sub$octoID)
+
+  for (j in 1:length(octos.present)){
+    if(sum(deploy.sub$octoID==octos.present[j],na.rm=T)>1){
+      deploy.single.octo=deploy.sub[deploy.sub$octoID==octos.present[j],] #selecting only one octopus at a time
+      
+      #Finding which arrivals are immediately followed by a departure
+      visit.depar=which(deploy.single.octo$type[1:(nrow(deploy.single.octo)-1)]=="arrive"&deploy.single.octo$type[2:nrow(deploy.single.octo)]=="depart")
+      visit.dura=difftime(deploy.single.octo$time[visit.depar+1],deploy.single.octo$time[visit.depar],units = "min")
+      visit.stub=data.frame(deployment=rep(deployments[i],length(visit.dura)),
+                 octoID=rep(octos.present[j],length(visit.dura)),
+                 time=deploy.single.octo$time[visit.depar],
+                 duration=as.numeric(visit.dura))
+      visit=rbind(visit,visit.stub)
+
+      # Finding which departures are immecidately followed by an arrival      
+      excur.depar=which(deploy.single.octo$type[1:(nrow(deploy.single.octo)-1)]=="depart"&deploy.single.octo$type[2:nrow(deploy.single.octo)]=="arrive")
+      excur.dura=difftime(deploy.single.octo$time[excur.depar+1],deploy.single.octo$time[excur.depar],units = "min")
+      excur.stub=data.frame(deployment=rep(deployments[i],length(excur.dura)),
+                 octoID=rep(octos.present[j],length(excur.dura)),
+                 time=deploy.single.octo$time[excur.depar],
+                 duration=as.numeric(excur.dura))
+      excursion=rbind(excursion,excur.stub)
+      
+      # Finding arrivals followed immediately by another arrival (This should not be possible, so this is error locating)
+      badarrival.depar=which(deploy.single.octo$type[1:(nrow(deploy.single.octo)-1)]=="arrive"&deploy.single.octo$type[2:nrow(deploy.single.octo)]=="arrive")
+      badarrival.dura=difftime(deploy.single.octo$time[badarrival.depar+1],deploy.single.octo$time[badarrival.depar],units = "min")
+      badarrival.stub=data.frame(deployment=rep(deployments[i],length(badarrival.dura)),
+                 octoID=rep(octos.present[j],length(badarrival.dura)),
+                 time1=deploy.single.octo$time[badarrival.depar],
+                 time2=deploy.single.octo$time[badarrival.depar+1],
+                 duration=as.numeric(badarrival.dura))
+      badarrival=rbind(badarrival,badarrival.stub)
+      
+      baddepar.depar=which(deploy.single.octo$type[1:(nrow(deploy.single.octo)-1)]=="depart"&deploy.single.octo$type[2:nrow(deploy.single.octo)]=="depart")
+      baddepar.dura=difftime(deploy.single.octo$time[baddepar.depar+1],deploy.single.octo$time[baddepar.depar],units = "min")
+      baddepar.stub=data.frame(deployment=rep(deployments[i],length(baddepar.dura)),
+                 octoID=rep(octos.present[j],length(baddepar.dura)),
+                 time1=deploy.single.octo$time[baddepar.depar],
+                 time2=deploy.single.octo$time[baddepar.depar+1],
+                 duration=as.numeric(baddepar.dura))
+      baddepar=rbind(baddepar,baddepar.stub)
+      
+    }
+  }
+}
+
+visit=visit[complete.cases(visit),]
+excursion=excursion[complete.cases(excursion),]
+
+```
+
+
+## Adding Day/Night to the visitation data based on sunrise and sunset times.
+```{r}
+driftwood=matrix(c(-122.6396394,48.1639127), nrow=1)
+bay=SpatialPoints(driftwood, proj4string=CRS("+proj=longlat +datum=WGS84"))
+
+visit$daynight="night"
+excursion$daynight="night"
+visit$day_expected=0
+excursion$day_expected=0
+
+for (i in 1:nrow(visit)){
+  sunrise=sunriset(bay, as.POSIXct(visit$time[i]), direction="sunrise", POSIXct.out=TRUE)$time
+  sunset=sunriset(bay,  as.POSIXct(visit$time[i]), direction="sunset", POSIXct.out=TRUE)$time
+  if (visit$time[i]>sunrise&visit$time[i]<sunset) {
+    visit$daynight[i]="day"
+  }
+  visit$day_expected[i]=as.numeric(difftime(sunset,sunrise,units="hours"))/24
+}
+
+for (i in 1:nrow(excursion)){
+  sunrise=sunriset(bay, as.POSIXct(excursion$time[i]), direction="sunrise", POSIXct.out=TRUE)$time
+  sunset=sunriset(bay,  as.POSIXct(excursion$time[i]), direction="sunset", POSIXct.out=TRUE)$time
+  if (excursion$time[i]>sunrise&excursion$time[i]<sunset) {
+    excursion$daynight[i]="day"
+  }
+  excursion$day_expected[i]=as.numeric(difftime(sunset,sunrise,units="hours"))/24
+}
+
+```
+
+
+```{r}
+mean(visit$duration)
+```
+```{r}
+mean(excursion$duration)
+```
+
+
+
+
+# Conspecific interactions
+
+Things that were to be tested per the proposal:
+
+#. "I will use a chi-square test to compare the frequency of different behaviors during interactions."
+#. "I will use a t-test to compare the mean interaction duration and"
+#. "chi-square to compare conspecific interaction frequency as a function of the time of day (day vs. night)."
+#. "A chi-squared test will be used to determine if the relative size of the octopuses in an interaction affects the outcome."
+
+## Making the visitation dataframe
+```{r}
+nonres.visit=data.frame(deployment=as.numeric(NA),
+           octoID=as.character(NA),
+           time=as.POSIXct(NA),
+           duration=as.numeric(NA))
+
+```
+
+
+
+
+## Extracting non-resident visitation durations
+```{r}
+
+deployments=unique(events$`Deployment #`)
+
+
+for (i in 1:length(deployments)){
+  arrivals=events$realtime[events$Species=="octopus_rubescens"&
+                    events$Event_type=="non-resident non-interaction"&
+                    events$Behavior=="frame_arrival"&
+                    events$`Deployment #`==deployments[i]]
+
+  arrivals.ID=events$OctoID[events$Species=="octopus_rubescens"&
+                    events$Event_type=="non-resident non-interaction"&
+                    events$Behavior=="frame_arrival"&
+                    events$`Deployment #`==deployments[i]]
+
+  departures=events$realtime[events$Species=="octopus_rubescens"&
+                    events$Event_type=="non-resident non-interaction"&
+                    events$Behavior=="frame_departure"&
+                    events$`Deployment #`==deployments[i]]
+
+  departures.ID=events$OctoID[events$Species=="octopus_rubescens"&
+                    events$Event_type=="non-resident non-interaction"&
+                    events$Behavior=="frame_departure"&
+                    events$`Deployment #`==deployments[i]]
+
+  if (length(arrivals)>0){
+  depar.tags=c(rep("arrive",length(arrivals)),rep("depart",length(departures)))
+
+  deploy.sub=data.frame(time=c(arrivals,departures),octoID=c(arrivals.ID,departures.ID),type=depar.tags)
+  deploy.sub=deploy.sub[order(deploy.sub$time),]
+
+  octos.present=unique(deploy.sub$octoID)
+
+  for (j in 1:length(octos.present)){
+    if(sum(deploy.sub$octoID==octos.present[j],na.rm=T)>1){
+      deploy.single.octo=deploy.sub[deploy.sub$octoID==octos.present[j],] #selecting only one octopus at a time
+      
+      #Finding which arrivals are immediately followed by a departure
+      visit.depar=which(deploy.single.octo$type[1:(nrow(deploy.single.octo)-1)]=="arrive"&deploy.single.octo$type[2:nrow(deploy.single.octo)]=="depart")
+      visit.dura=difftime(deploy.single.octo$time[visit.depar+1],deploy.single.octo$time[visit.depar],units = "min")
+      visit.stub=data.frame(deployment=rep(deployments[i],length(visit.dura)),
+                 octoID=rep(octos.present[j],length(visit.dura)),
+                 time=deploy.single.octo$time[visit.depar],
+                 duration=as.numeric(visit.dura))
+      nonres.visit=rbind(nonres.visit,visit.stub)
+
+      
+      # Finding arrivals followed immediately by another arrival (This should not be possible, so this is error locating)
+      badarrival.depar=which(deploy.single.octo$type[1:(nrow(deploy.single.octo)-1)]=="arrive"&deploy.single.octo$type[2:nrow(deploy.single.octo)]=="arrive")
+      badarrival.dura=difftime(deploy.single.octo$time[badarrival.depar+1],deploy.single.octo$time[badarrival.depar],units = "min")
+      badarrival.stub=data.frame(deployment=rep(deployments[i],length(badarrival.dura)),
+                 octoID=rep(octos.present[j],length(badarrival.dura)),
+                 time1=deploy.single.octo$time[badarrival.depar],
+                 time2=deploy.single.octo$time[badarrival.depar+1],
+                 duration=as.numeric(badarrival.dura))
+      badarrival=rbind(badarrival,badarrival.stub)
+      
+      baddepar.depar=which(deploy.single.octo$type[1:(nrow(deploy.single.octo)-1)]=="depart"&deploy.single.octo$type[2:nrow(deploy.single.octo)]=="depart")
+      baddepar.dura=difftime(deploy.single.octo$time[baddepar.depar+1],deploy.single.octo$time[baddepar.depar],units = "min")
+      baddepar.stub=data.frame(deployment=rep(deployments[i],length(baddepar.dura)),
+                 octoID=rep(octos.present[j],length(baddepar.dura)),
+                 time1=deploy.single.octo$time[baddepar.depar],
+                 time2=deploy.single.octo$time[baddepar.depar+1],
+                 duration=as.numeric(baddepar.dura))
+      baddepar=rbind(baddepar,baddepar.stub)
+    }
+    }
+  }
+}
+
+
+nonres.visit=nonres.visit[complete.cases(nonres.visit),]
+```
+
+
+## Adding Day/Night to the non-resident visitation data based on sunrise and sunset times.
+```{r}
+
+nonres.visit$daynight="night"
+nonres.visit$day_expected=0
+
+for (i in 1:nrow(nonres.visit)){
+  sunrise=sunriset(bay, as.POSIXct(nonres.visit$time[i]), direction="sunrise", POSIXct.out=TRUE)$time
+  sunset=sunriset(bay,  as.POSIXct(nonres.visit$time[i]), direction="sunset", POSIXct.out=TRUE)$time
+  if (nonres.visit$time[i]>sunrise&nonres.visit$time[i]<sunset) {
+    nonres.visit$daynight[i]="day"
+  }
+  nonres.visit$day_expected[i]=as.numeric(difftime(sunset,sunrise,units="hours"))/24
+}
+
+```
+
+```{r}
+events$realtime[events$Species=="octopus_rubescens"&
+                    events$Event_type=="non-resident non-interaction"&
+                    events$Behavior=="frame_arrival"]
+```
+
+
+##
+
+```{r}
+events[events$Event_type=="non-resident non-interaction"&events$Species=="octopus_rubescens"&events$Behavior=="frame_arrival",]
+```
+
+
+```{r}
+events[events$Event_type=="non-resident non-interaction"&events$Species=="octopus_rubescens"&events$Behavior=="frame_departure",]
+```
+
+
+
+```{r}
+events[events$Event_type=="nonresident/resident interaction"&events$Species=="octopus_rubescens"|
+        events$Event_type=="resident/resident interaction"&events$Species=="octopus_rubescens",]
+```
+
+
+```{r}
+table(events$Event_type)
+```
+
+
+
+```{r}
+table(events$`1st Analyst ID`)
+```
+
+
+
+# Playing around
+```{r}
+hist(hour(events$realtime[events$Behavior=="frame_arrival"&events$Species=="octopus_rubescens"]),breaks=24)
+```
+
+```{r}
+
+octoarrival.tab=data.frame(table(factor(hour(events$realtime[events$Behavior=="frame_arrival"&events$Species=="octopus_rubescens"]),levels=0:23)))
+xaxis=seq(from=0,to=359,by=(360/nrow(octoarrival.tab)))*(pi/180)
+```
+
+```{r}
+setrise=strptime("07/23/2021",format="%m/%d/%Y")
+
+rays=seq(from=0,to=pi*2,length.out=10000)
+col.rays=rep("lightcyan",length(rays))
+
+day.start=round((as.numeric(difftime(sunriset(bay, as.POSIXct(setrise), direction="sunrise", POSIXct.out=TRUE)$time,setrise))/24)*length(rays))
+day.end=round((as.numeric(difftime(sunriset(bay, as.POSIXct(setrise), direction="sunset", POSIXct.out=TRUE)$time,setrise))/24)*length(rays))
+col.rays[day.start:day.end]="lightgoldenrodyellow"
+
+radial.plot(rep(c(0,max(octoarrival.tab$Freq)),length(rays)/2),rays,show.grid=T,clockwise=T,start=pi/2,line.col=col.rays,
+            label.pos=xaxis,labels=0:23,show.grid.labels = F)
+radial.plot(octoarrival.tab$Freq,xaxis,labels=0:23,clockwise=T,show.grid.labels = F,rp.type="r",
+            lwd=3,line.col="tomato3",start=pi/2,rad.col="white",grid.col="white",add=T)
+
+
+lines(c(0,1),c(0,1))
+```
+
+```{r}
+hour.dec=hour(events$realtime[events$Behavior=="frame_arrival"&events$Species=="octopus_rubescens"])+
+minute(events$realtime[events$Behavior=="frame_arrival"&events$Species=="octopus_rubescens"])/60
+
+conv.rad=(hour.dec/24)*2*pi #converting hour of day to radians
+
+inv.rad=(2*pi)-conv.rad #inverting it so that it goes clockwise
+
+shift.rad=inv.rad+(pi/2) #shifting so that 0 is on top
+
+times=circular(shift.rad)
+
+radial.plot(rep(c(0,1),length(rays)/2),rays,show.grid=T,clockwise=T,start=pi/2,line.col=col.rays,
+            label.pos=xaxis,labels=0:23,show.grid.labels = F)
+rose.diag(times,bins=24,col="tomato",shrink=0.4,add=T,axes=F,radii.scale="linear",prop=6)
+points(times,pch=21,bg="tomato",cex=0.5)
 
 ```
 
