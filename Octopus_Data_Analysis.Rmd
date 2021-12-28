@@ -374,7 +374,7 @@ octoarrival.tab=data.frame(table(factor(hour(events$realtime[events$Behavior=="f
 xaxis=seq(from=0,to=359,by=(360/nrow(octoarrival.tab)))*(pi/180)
 ```
 
-# Plotting arrival times
+# Plotting octopus arrival times
 ```{r}
 octo.visits=events$realtime[events$Behavior=="frame_arrival"&events$Species=="octopus_rubescens"]
 
