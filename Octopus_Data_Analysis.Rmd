@@ -226,6 +226,22 @@ mean(excursion$duration)
 ```
 
 
+## Adding day night and probabilities to each entry in the event log
+```{r}
+events$daynight="night"
+events$day_expected=0
+
+for (i in 1:nrow(events)){
+  sunrise=sunriset(bay, as.POSIXct(events$realtime[i]), direction="sunrise", POSIXct.out=TRUE)$time
+  sunset=sunriset(bay,  as.POSIXct(events$realtime[i]), direction="sunset", POSIXct.out=TRUE)$time
+  if (events$realtime[i]>sunrise&events$realtime[i]<sunset) {
+    events$daynight[i]="day"
+  }
+  events$day_expected[i]=as.numeric(difftime(sunset,sunrise,units="hours"))/24
+}
+```
+
+
 
 
 # Conspecific interactions
@@ -415,4 +431,31 @@ DayHist(to.plot,date="07/10/2021")
 
 
 ```
+
+# Statistical Analysis
+## Chi Square example
+
+For this example we will look at kelp greenling visitation.
+First we will make a table of the distribution of kelp greenling frame arrival events in the day and night
+```{r}
+kelpy.daynight=as.numeric(table(events$daynight[events$Behavior=="frame_arrival"&events$Species=="kelp greenling"]))
+
+```
+Next we need to make a vector that has the probability of seeing a kelp greenling in the day or night if kelp greenling show up randomly with respect to time.  This essentially, therefore, is what percentage of time is day vs. night.
+```{r}
+kelpy.probs=c(
+mean(events$day_expected[events$Behavior=="frame_arrival"&events$Species=="kelp greenling"]),
+1-mean(events$day_expected[events$Behavior=="frame_arrival"&events$Species=="kelp greenling"])
+)
+kelpy.probs
+```
+
+Now we can do the chi-squared test
+```{r}
+kelpy.chi=chisq.test(kelpy.daynight,p=kelpy.probs)
+kelpy.chi
+```
+
+
+
 
