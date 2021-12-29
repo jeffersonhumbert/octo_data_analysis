@@ -13,8 +13,9 @@ library(maptools)
 library(circular)
 library(plotrix)
 library(remotes)
-library(activity)  #added for animal activity statistics
-install_github("KirtOnthank/CircularTimeHistogram")
+#library(activity)  #added for animal activity statistics
+#install_github("KirtOnthank/CircularTimeHistogram")
+library(CircularTimeHistogram)
 ```
 
 Getting google sheets authorization (run at least once before knitting)
@@ -398,30 +399,7 @@ levels of activity; statistically compare activity metrics through bootstrapping
 hist(hour(events$realtime[events$Behavior=="frame_arrival"&events$Species=="octopus_rubescens"]),breaks=24)
 ```
 
-```{r}
 
-octoarrival.tab=data.frame(table(factor(hour(events$realtime[events$Behavior=="frame_arrival"&events$Species=="octopus_rubescens"]),levels=0:23)))
-xaxis=seq(from=0,to=359,by=(360/nrow(octoarrival.tab)))*(pi/180)
-```
-
-```{r}
-setrise=strptime("07/23/2021",format="%m/%d/%Y")
-
-rays=seq(from=0,to=pi*2,length.out=10000)
-col.rays=rep("lightcyan",length(rays))
-
-day.start=round((as.numeric(difftime(sunriset(bay, as.POSIXct(setrise), direction="sunrise", POSIXct.out=TRUE)$time,setrise))/24)*length(rays))
-day.end=round((as.numeric(difftime(sunriset(bay, as.POSIXct(setrise), direction="sunset", POSIXct.out=TRUE)$time,setrise))/24)*length(rays))
-col.rays[day.start:day.end]="lightgoldenrodyellow"
-
-radial.plot(rep(c(0,max(octoarrival.tab$Freq)),length(rays)/2),rays,show.grid=T,clockwise=T,start=pi/2,line.col=col.rays,
-            label.pos=xaxis,labels=0:23,show.grid.labels = F)
-radial.plot(octoarrival.tab$Freq,xaxis,labels=0:23,clockwise=T,show.grid.labels = F,rp.type="r",
-            lwd=3,line.col="tomato3",start=pi/2,rad.col="white",grid.col="white",add=T)
-
-
-lines(c(0,1),c(0,1))
-```
 #its not ellegant but i can easily change the graph to exclude or include any species I want
 ```{r}
 
@@ -437,25 +415,23 @@ crabs=events$Species=="red rock crab"
 crabs2=events$Species=="dungeness crab"
 crabs3=crabs+crabs2
 
-#I just change "frame_arrival"&____ to include my specific species
-hour.dec=hour(events$realtime[events$Behavior=="frame_arrival"&fish3])+
-minute(events$realtime[events$Behavior=="frame_arrival"&fish3])/60
+to.plot=events$realtime[events$Behavior=="frame_arrival"&fish3]
+DayHist(to.plot,date="07/10/2021")
 
-conv.rad=(hour.dec/24)*2*pi #converting hour of day to radians
-
-inv.rad=(2*pi)-conv.rad #inverting it so that it goes clockwise
-
-shift.rad=inv.rad+(pi/2) #shifting so that 0 is on top
-
-times=circular(shift.rad)
-
-radial.plot(rep(c(0,1),length(rays)/2),rays,show.grid=T,clockwise=T,start=pi/2,line.col=col.rays,
-            label.pos=xaxis,labels=0:23,show.grid.labels = F)
-rose.diag(times,bins=24,col="tomato",shrink=0.4,add=T,axes=F,radii.scale="linear",prop=6)
-points(times,pch=21,bg="tomato",cex=0.5)
 
 ```
-test
 
+
+# Chi square for octopus excursions
+```{r}
+
+
+
+```
+
+
+```{r}
+
+```
 
 

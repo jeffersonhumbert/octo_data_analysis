@@ -325,6 +325,10 @@ for (i in 1:nrow(nonres.visit)){
 
 ```
 
+
+
+# Random Subsetting
+
 ```{r}
 events$realtime[events$Species=="octopus_rubescens"&
                     events$Event_type=="non-resident non-interaction"&
@@ -363,17 +367,8 @@ table(events$`1st Analyst ID`)
 
 
 
-# Playing around
-```{r}
-hist(hour(events$realtime[events$Behavior=="frame_arrival"&events$Species=="octopus_rubescens"]),breaks=24)
-```
 
-```{r}
-
-octoarrival.tab=data.frame(table(factor(hour(events$realtime[events$Behavior=="frame_arrival"&events$Species=="octopus_rubescens"]),levels=0:23)))
-xaxis=seq(from=0,to=359,by=(360/nrow(octoarrival.tab)))*(pi/180)
-```
-
+## Visualization
 # Plotting octopus arrival times
 ```{r}
 octo.visits=events$realtime[events$Behavior=="frame_arrival"&events$Species=="octopus_rubescens"]
@@ -382,5 +377,24 @@ DayHist(octo.visits,date="08/02/2021")
 ```
 
 
+#its not ellegant but i can easily change the graph to exclude or include any species I want
+```{r}
 
+fish=events$Species=="lingcod"
+fish2=events$Species=="quillback_rockfish"
+fish4=events$Species=="kelp greenling"
+fish5=events$Species=="copper_rockfish"
+fish6=events$Species=="painted greenling"
+fish7=events$Species=="china_rockfish"
+fish3=fish+fish4
+
+crabs=events$Species=="red rock crab"
+crabs2=events$Species=="dungeness crab"
+crabs3=crabs+crabs2
+
+to.plot=events$realtime[events$Behavior=="frame_arrival"&fish3]
+DayHist(to.plot,date="07/10/2021")
+
+
+```
 
