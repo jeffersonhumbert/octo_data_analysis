@@ -17,6 +17,7 @@ library(plotrix)
 library(CircularTimeHistogram)
 ```
 
+# Grabbing data and cleaning
 Getting google sheets authorization (run at least once before knitting)
 ```{r eval=FALSE}
 drive_auth()
@@ -37,12 +38,29 @@ events=events[complete.cases(events$Event_type),]
 Reformatting time to POSIX class to make it easier to calc times.
 There seems to be two different formats for dates used in the dataset, so I run this command twice.
 ```{r}
-events$realtime=strptime(paste(events$Date,events$Time),format="%m/%d/%Y %H:%M:%S")
-events$realtime[is.na(events$realtime)]=strptime(paste(events$Date[is.na(events$realtime)],events$Time[is.na(events$realtime)]),format="%Y/%m/%d %H:%M:%S")
+events$realtime_original=
+  strptime(paste(events$Date,events$Time),format="%m/%d/%Y %H:%M:%S")
+events$realtime_original[is.na(events$realtime_original)]=
+  strptime(paste(events$Date[is.na(events$realtime_original)],events$Time[is.na(events$realtime_original)]),format="%Y/%m/%d %H:%M:%S")
 
 ```
 
+## fixing times
+```{r}
+offsets=read_sheet(sheetID,"time_offsets",col_types="iDTTTTTTTTTTi")
+```
 
+```{r}
+offsets=offsets[complete.cases(offsets),]
+offset.tab=aggregate(offset_min~Deployment,data=offsets,FUN="mean")
+
+events$realtime=events$realtime_original
+
+for (i in 1:nrow(offset.tab)){
+  events$realtime[events$`Deployment #`==offset.tab$Deploymen[i]]=
+    events$realtime_original[events$`Deployment #`==offset.tab$Deploymen[i]]+(offset.tab$offset_min[i]*60)
+}
+```
 
 # Den Use Dynamics
 
@@ -373,7 +391,7 @@ table(events$`1st Analyst ID`)
 ```{r}
 octo.visits=events$realtime[events$Behavior=="frame_arrival"&events$Species=="octopus_rubescens"]
 
-DayHist(octo.visits,date="08/02/2021")
+DayHist(octo.visits,date="07/10/2021")
 ```
 
 
