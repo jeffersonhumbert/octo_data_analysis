@@ -6,14 +6,15 @@ output: html_document
 ---
 
 ```{r}
-library(remotes)
-#install_github("KirtOnthank/CircularTimeHistogram")
 library(googlesheets4)
 library(googledrive)
 library(lubridate)
 library(maptools)
 library(circular)
 library(plotrix)
+library(remotes)
+#library(activity)  #added for animal activity statistics
+#install_github("KirtOnthank/CircularTimeHistogram")
 library(CircularTimeHistogram)
 ```
 
@@ -325,14 +326,11 @@ for (i in 1:nrow(nonres.visit)){
 
 ```
 
-
-
-# Random Subsetting
-
 ```{r}
 events$realtime[events$Species=="octopus_rubescens"&
                     events$Event_type=="non-resident non-interaction"&
                     events$Behavior=="frame_arrival"]
+
 ```
 
 
@@ -365,15 +363,40 @@ table(events$Event_type)
 table(events$`1st Analyst ID`)
 ```
 
+#messing around
+#statistical analysis for visitations day vs night/ chi squared
 
-
-
-## Visualization
-# Plotting octopus arrival times
 ```{r}
-octo.visits=events$realtime[events$Behavior=="frame_arrival"&events$Species=="octopus_rubescens"]
+data_frame_stats=events[events$Event_type=="non-resident non-interaction"&events$Species=="octopus_rubescens"&events$Behavior=="frame_arrival",]
 
-DayHist(octo.visits,date="08/02/2021")
+hour.dec
+
+
+table(data_frame_stats$treatment, data_frame_stats$improvement)
+
+chisq.test(data_frame_stats$treatment, data_frame_stats$improvement, correct=FALSE)
+
+table(hour(events$realtime[events$Behavior=="frame_arrival"&events$Species=="octopus_rubescens"]),breaks=24)
+
+```
+#animal activity statistics based on the package 'activity' 
+
+#Description: Provides functions to express clock time data relative to anchor points (typically solar); fit kernel density functions to animal activity time data; plot activity distributions; quantify overall
+levels of activity; statistically compare activity metrics through bootstrapping; evaluate variation in linear variables with time (or other circular variables).
+
+```{r}
+
+
+
+```
+
+
+
+# Playing around
+```{r}
+
+
+hist(hour(events$realtime[events$Behavior=="frame_arrival"&events$Species=="octopus_rubescens"]),breaks=24)
 ```
 
 
@@ -397,4 +420,18 @@ DayHist(to.plot,date="07/10/2021")
 
 
 ```
+
+
+# Chi square for octopus excursions
+```{r}
+
+
+
+```
+
+
+```{r}
+
+```
+
 
