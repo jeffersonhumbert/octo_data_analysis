@@ -404,6 +404,8 @@ table(events$`1st Analyst ID`)
 
 ## Visualization
 # Plotting octopus arrival times
+
+#should we be plotting frame arrival because the start of each deployment begins with a frame_arrival, wouldnt it be more useful to plot frame departures??
 ```{r}
 octo.visits=events$realtime[events$Behavior=="frame_arrival"&events$Species=="octopus_rubescens"]
 
@@ -428,9 +430,9 @@ crabs3=crabs+crabs2
 
 to.plot=events$realtime[events$Behavior=="frame_arrival"&fish3]
 
-png(filename="Ling_and_kelpies.png",width=1000,height=1000,res=200)
+#png(filename="Ling_and_kelpies.png",width=1000,height=1000,res=200)
 DayHist(to.plot,date="07/10/2021",hist.zoom = 10)
-dev.off()
+#dev.off()
 
 ```
 
