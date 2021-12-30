@@ -427,8 +427,10 @@ crabs2=events$Species=="dungeness crab"
 crabs3=crabs+crabs2
 
 to.plot=events$realtime[events$Behavior=="frame_arrival"&fish3]
-DayHist(to.plot,date="07/10/2021")
 
+png(filename="Ling_and_kelpies.png",width=1000,height=1000,res=200)
+DayHist(to.plot,date="07/10/2021",hist.zoom = 10)
+dev.off()
 
 ```
 
@@ -457,5 +459,34 @@ kelpy.chi
 ```
 
 
+## T-test example
 
+Lets look to see if non-resident visits are longer in the day or in the night.   We have already extracted that data and it is in nonres.visit.  So, we can just call it from there. 
+
+First, we need to test our assumptions.  The bartlett test looks for equal variances.
+```{r}
+bartlett.test(nonres.visit$duration,nonres.visit$daynight)
+```
+So, we fail the Bartlett test (p<0.05). The variances are no equal between the   We will look at normality as well anyhow using a Shapiro-Wilks test.
+
+```{r}
+shapiro.test(nonres.visit$duration[nonres.visit$daynight=="night"])
+shapiro.test(nonres.visit$duration[nonres.visit$daynight=="day"])
+```
+
+Well, the night data is normally distributed (p>0.05), but the daytime data is not (p<0.05)
+
+The correct way to do this is to use a non-parametric or permutation test. I prefer permutation tests (they are more powerful than non-parametric tests, meaning they are more likely to reject the null hypothesis is it should be). This is how you would do it.  
+
+```{r}
+library(perm)
+permTS(nonres.visit$duration[nonres.visit$daynight=="day"],nonres.visit$duration[nonres.visit$daynight=="night"],
+       alternative="two.sided",method="exact.mc",control=permControl(nmc=10000))
+
+```
+
+If you passed you assumptions test and could do a t-test, this is how you would do it:
+```{r}
+t.test(duration~daynight,data=nonres.visit,var.equal=T)
+```
 
