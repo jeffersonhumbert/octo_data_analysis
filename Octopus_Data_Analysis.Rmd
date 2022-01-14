@@ -28,6 +28,8 @@ Pulling data from google sheets.
 ```{r}
 sheetID="1D53PFAokXS4kHfwSc9riEdKFo8T46GfQxjyo5PEWJg4"
 events=read_sheet(sheetID,"event_log",col_types="icccccccccccc")
+#changed the google sheet to be an adapted file without additional octopus frame arrivals within the same day
+
 ```
 
 Cleaning out unfilled rows.
@@ -412,29 +414,88 @@ octo.visits=events$realtime[events$Behavior=="frame_arrival"&events$Species=="oc
 DayHist(octo.visits,date="07/10/2021")
 ```
 
-
+#Graph species
 #its not ellegant but i can easily change the graph to exclude or include any species I want
 ```{r}
 
-fish=events$Species=="lingcod"
+fish1=events$Species=="lingcod"
+fish2=events$Species=="quillback_rockfish"
+fish3=events$Species=="pile_perch"
+fish4=events$Species=="kelp greenling"
+fish5=events$Species=="copper_rockfish"
+fish6=events$Species=="painted greenling"
+fish7=events$Species=="china_rockfish"
+fish8=events$Species=="octopus_rubescens"
+fish9=events$Species=="spiny dogfish"
+fish10=events$Species=="buffalo sculpin"
+fish11=events$Species=="wolf eel"
+fish12=events$Species=="flatfish"
+fish13=events$Species=="sailfin sculpin"
+
+fish=fish1+fish2+fish3+fish4+fish5+fish6+fish7+fish9+fish10+fish11+fish12+fish13
+fish=fish11
+
+
+
+crabs1=events$Species=="red rock crab"
+crabs2=events$Species=="dungeness crab"
+crabs3=events$Species=="cancer crab"
+crabs4=events$Species=="helmet_crab"
+crabs5=events$Species=="kelp_crab"
+crabs6=events$Species=="urchin"
+crabs7=events$Species=="sea_cucumber"
+crabs8=events$Species=="sea_star"
+
+
+crabs=crabs8
+
+to.plot=events$realtime[events$Behavior=="frame_arrival"&crabs]
+
+#png(filename="Ling_and_kelpies.png",width=1000,height=1000,res=200)
+DayHist(to.plot,date="07/10/2021",hist.zoom = 10)
+#dev.off()
+to.plot
+```
+
+##to graph different behaviors in unison
+```{r}
+
+fish1=events$Species=="lingcod"
 fish2=events$Species=="quillback_rockfish"
 fish4=events$Species=="kelp greenling"
 fish5=events$Species=="copper_rockfish"
 fish6=events$Species=="painted greenling"
 fish7=events$Species=="china_rockfish"
-fish3=fish+fish4
+fish8=events$Species=="octopus_rubescens"
+fish=fish8
 
-crabs=events$Species=="red rock crab"
-crabs2=events$Species=="dungeness crab"
-crabs3=crabs+crabs2
 
-to.plot=events$realtime[events$Behavior=="frame_arrival"&fish3]
+behave1=events$Behavior=="enter_bottle"
+behave2=events$Behavior=="fortify"
+behave3=events$Behavior=="touch_bottle"
+behave4=events$Behavior=="den_opening"
+behave5=events$Behavior=="touch_resident"
+behave6=events$Behavior=="exit_bottle"
+behave7=events$Behavior=="periscope"
+behave8=events$Behavior=="predation"
+behave9=events$Behavior=="sat_outside"
+behave10=events$Behavior=="looking_in_bottle"
+behave11=events$Behavior=="depositing_waste_outside_den"
+
+#behave=behave1+behave3+behave4+behave5+behave6+behave7+behave8+behave9+behave10+behave11
+#behave=behave5+behave1+behave7+behave6
+behave=behave5
+
+
+to.plot=events$realtime[behave&fish]
 
 #png(filename="Ling_and_kelpies.png",width=1000,height=1000,res=200)
-DayHist(to.plot,date="07/10/2021",hist.zoom = 10)
+DayHist(to.plot,date="07/10/2021",hist.zoom = 4.5)
 #dev.off()
-
+to.plot
 ```
+
+
 
 # Statistical Analysis
 ## Chi Square example
@@ -491,4 +552,51 @@ If you passed you assumptions test and could do a t-test, this is how you would 
 ```{r}
 t.test(duration~daynight,data=nonres.visit,var.equal=T)
 ```
+
+##octopus visitations: day vs night
+```{r}
+octo.daynight=as.numeric(table(events$daynight[events$Behavior=="frame_departure"&events$Species=="octopus_rubescens"]))
+
+octo.probs=c(
+mean(events$day_expected[events$Behavior=="frame_departure"&events$Species=="octopus_rubescens"]),
+1-mean(events$day_expected[events$Behavior=="frame_departure"&events$Species=="octopus_rubescens"])
+)
+
+octo.chi=chisq.test(octo.daynight,p=octo.probs)
+octo.chi
+```
+
+
+#octopus den fortification: day vs. night
+```{r}
+octo.daynight=as.numeric(table(events$daynight[events$Behavior=="fortify"&events$Species=="octopus_rubescens"]))
+
+octo.probs=c(
+mean(events$day_expected[events$Behavior=="fortify"&events$Species=="octopus_rubescens"]),
+1-mean(events$day_expected[events$Behavior=="fortify"&events$Species=="octopus_rubescens"])
+)
+
+octo.chi=chisq.test(octo.daynight,p=octo.probs)
+octo.chi
+
+```
+
+#crabs day vs night
+```{r}
+
+to.plot=events$realtime[events$Behavior=="frame_arrival"&crabs]
+
+crab.daynight=as.numeric(table(events$daynight[events$Behavior=="frame_arrival"&crabs]))
+crab.daynight
+
+crab.probs=c(
+mean(events$day_expected[events$Behavior=="frame_arrival"&crabs]),
+1-mean(events$day_expected[events$Behavior=="frame_arrival"&crabs])
+)
+
+crab.chi=chisq.test(crab.daynight,p=crab.probs)
+crab.chi
+
+```
+
 
