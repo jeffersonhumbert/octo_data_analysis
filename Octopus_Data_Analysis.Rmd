@@ -34,7 +34,9 @@ events=read_sheet(sheetID,"event_log",col_types="icccccccccccc")
 
 Cleaning out unfilled rows.
 ```{r}
-events=events[complete.cases(events$Event_type),]
+events=events[complete.cases(events$Date),]
+events=events[complete.cases(events$Behavior),]
+
 ```
 
 Reformatting time to POSIX class to make it easier to calc times.
@@ -452,7 +454,7 @@ crabs=crabs8
 to.plot=events$realtime[events$Behavior=="frame_arrival"&crabs]
 
 #png(filename="Ling_and_kelpies.png",width=1000,height=1000,res=200)
-DayHist(to.plot,date="07/10/2021",hist.zoom = 10)
+DayHist(to.plot,date="07/10/2021",hist.zoom = 4)
 #dev.off()
 to.plot
 ```
@@ -596,6 +598,109 @@ mean(events$day_expected[events$Behavior=="frame_arrival"&crabs]),
 
 crab.chi=chisq.test(crab.daynight,p=crab.probs)
 crab.chi
+
+```
+
+
+# interspecific visitations
+
+Finding times where there are no octopuses
+```{r}
+
+events$Behavior[events$Behavior=="second_departure"]="frame_departure"
+events$Behavior[events$Behavior=="second_arrival"]="frame_arrival"
+
+
+
+octos.present=events[events$Behavior=="deploy_start"|
+         events$Species=="octopus_rubescens"&
+         events$Behavior=="frame_arrival"|
+         events$Species=="octopus_rubescens"&
+         events$Behavior=="frame_departure"|
+         events$Species=="octopus_rubescens"&
+         events$Behavior=="deploy_start"|
+         events$Behavior=="deploy_end",
+         ]
+
+octos.present$number=0
+
+for (i in 1:length(deployments)){
+  temp=octos.present[octos.present$`Deployment #`==deployments[i],]
+  temp=temp[order(temp$realtime),]
+  octos.present[octos.present$`Deployment #`==deployments[i],]=temp
+}
+
+
+for (i in 1:length(deployments)){
+  behaviors=octos.present$Behavior[octos.present$`Deployment #`==deployments[i]]
+  present=rep(0,length(behaviors))
+  for (j in 2:length(behaviors)){
+    if (behaviors[j]=="frame_arrival"){
+      present[j]=present[j-1]+1
+    }
+    if (behaviors[j]=="frame_departure"){
+      present[j]=present[j-1]-1
+    }
+    if (behaviors[j]=="deploy_end"){
+      present[j]=present[j-1]
+    }
+  }
+  octos.present$number[octos.present$`Deployment #`==deployments[i]]=present
+}
+
+```
+
+
+adding end times to each entry.
+```{r}
+octos.present$endtime=octos.present$realtime[1]
+
+
+for (i in 1:length(deployments)){
+  octos.present$endtime[head(which(octos.present$`Deployment #`==deployments[i]),-1)]= #All of the times excepts the last (which is the end of deployment)
+    octos.present$realtime[tail(which(octos.present$`Deployment #`==deployments[i]),-1)] #is replaced by all of the times except the first
+}
+
+octos.present=octos.present[!octos.present$Behavior=="deploy_end",]
+
+
+```
+
+
+Finding durations of each time period
+```{r}
+octos.present$duration=as.numeric(difftime(octos.present$endtime,octos.present$realtime,units = "min"))
+```
+
+finding total time with and without octopuses
+```{r}
+min.absent=sum(octos.present$duration[octos.present$number==0])
+min.present=sum(octos.present$duration[octos.present$number>0])
+min.absent
+min.present
+```
+
+Tallying a species arrivals when octopus is present versus absent
+```{r}
+kelpies=numeric()
+
+for (i in 1:nrow(octos.present)){
+  kelpies[i]=sum(events$Species=="kelp greenling"&
+    events$`Deployment #`==octos.present$`Deployment #`[i]&
+    events$realtime>octos.present$realtime[i]&
+    events$realtime<octos.present$endtime[i])
+}
+
+kelpies.absent=sum(kelpies[octos.present$number==0])
+kelpies.present=sum(kelpies[octos.present$number>0])
+kelpies.absent
+kelpies.present
+```
+
+```{r}
+probs=c(min.absent/(min.absent+min.present),min.present/(min.absent+min.present))
+
+chisq.test(c(kelpies.absent,kelpies.present),p=probs)
 
 ```
 
