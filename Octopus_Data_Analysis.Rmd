@@ -8,13 +8,14 @@ output: html_document
 ```{r}
 library(remotes)
 #install_github("KirtOnthank/CircularTimeHistogram")
+library(CircularTimeHistogram)
 library(googlesheets4)
 library(googledrive)
 library(lubridate)
 library(maptools)
 library(circular)
 library(plotrix)
-library(CircularTimeHistogram)
+library(perm)
 ```
 
 # Grabbing data and cleaning
@@ -309,7 +310,8 @@ for (i in 1:length(deployments)){
       deploy.single.octo=deploy.sub[deploy.sub$octoID==octos.present[j],] #selecting only one octopus at a time
       
       #Finding which arrivals are immediately followed by a departure
-      visit.depar=which(deploy.single.octo$type[1:(nrow(deploy.single.octo)-1)]=="arrive"&deploy.single.octo$type[2:nrow(deploy.single.octo)]=="depart")
+      visit.depar=which(deploy.single.octo$type[1:(nrow(deploy.single.octo)-1)]=="arrive"&
+                          deploy.single.octo$type[2:nrow(deploy.single.octo)]=="depart")
       visit.dura=difftime(deploy.single.octo$time[visit.depar+1],deploy.single.octo$time[visit.depar],units = "min")
       visit.stub=data.frame(deployment=rep(deployments[i],length(visit.dura)),
                  octoID=rep(octos.present[j],length(visit.dura)),
@@ -319,7 +321,8 @@ for (i in 1:length(deployments)){
 
       
       # Finding arrivals followed immediately by another arrival (This should not be possible, so this is error locating)
-      badarrival.depar=which(deploy.single.octo$type[1:(nrow(deploy.single.octo)-1)]=="arrive"&deploy.single.octo$type[2:nrow(deploy.single.octo)]=="arrive")
+      badarrival.depar=which(deploy.single.octo$type[1:(nrow(deploy.single.octo)-1)]=="arrive"&
+                               deploy.single.octo$type[2:nrow(deploy.single.octo)]=="arrive")
       badarrival.dura=difftime(deploy.single.octo$time[badarrival.depar+1],deploy.single.octo$time[badarrival.depar],units = "min")
       badarrival.stub=data.frame(deployment=rep(deployments[i],length(badarrival.dura)),
                  octoID=rep(octos.present[j],length(badarrival.dura)),
@@ -328,7 +331,8 @@ for (i in 1:length(deployments)){
                  duration=as.numeric(badarrival.dura))
       badarrival=rbind(badarrival,badarrival.stub)
       
-      baddepar.depar=which(deploy.single.octo$type[1:(nrow(deploy.single.octo)-1)]=="depart"&deploy.single.octo$type[2:nrow(deploy.single.octo)]=="depart")
+      baddepar.depar=which(deploy.single.octo$type[1:(nrow(deploy.single.octo)-1)]=="depart"&
+                             deploy.single.octo$type[2:nrow(deploy.single.octo)]=="depart")
       baddepar.dura=difftime(deploy.single.octo$time[baddepar.depar+1],deploy.single.octo$time[baddepar.depar],units = "min")
       baddepar.stub=data.frame(deployment=rep(deployments[i],length(baddepar.dura)),
                  octoID=rep(octos.present[j],length(baddepar.dura)),
@@ -544,10 +548,8 @@ Well, the night data is normally distributed (p>0.05), but the daytime data is n
 The correct way to do this is to use a non-parametric or permutation test. I prefer permutation tests (they are more powerful than non-parametric tests, meaning they are more likely to reject the null hypothesis is it should be). This is how you would do it.  
 
 ```{r}
-library(perm)
 permTS(nonres.visit$duration[nonres.visit$daynight=="day"],nonres.visit$duration[nonres.visit$daynight=="night"],
        alternative="two.sided",method="exact.mc",control=permControl(nmc=10000))
-
 ```
 
 If you passed you assumptions test and could do a t-test, this is how you would do it:
@@ -602,15 +604,26 @@ crab.chi
 ```
 
 
-# interspecific visitations
+# Interspecific Interaction Analysis
 
-Finding times where there are no octopuses
+Turning all rockfish species into just "rockfish".  I am doing this down here so I don't break your code above that relies on your sorting with different rockfish.  If you change that, we can put this earlier in the code.
 ```{r}
+events$Species[grep("rockfish",events$Species)]="rockfish"
+```
 
+Now I am taking a quick look at how many time each species appears in the data.
+```{r}
+table(events$Species[events$Behavior=="frame_arrival"])
+```
+It looks like we have enough data to do this analysis on rockfish, red rock crabs, kelp greenling, lingcod and maybe painted greenling. I think everything else doesn't have enough sightings to be worthwile.
+
+
+## Finding times where there are no octopuses
+
+This code only needs to run once.  I am making a dataframe that specifies how many octopuses are present at any given time. First, I convert all the second_arrivals and second departure to normal frame arrivals and departure events. Then, I exact every time a deployment starts, ends, an octopus arrives, or departs
+```{r}
 events$Behavior[events$Behavior=="second_departure"]="frame_departure"
 events$Behavior[events$Behavior=="second_arrival"]="frame_arrival"
-
-
 
 octos.present=events[events$Behavior=="deploy_start"|
          events$Species=="octopus_rubescens"&
@@ -621,15 +634,22 @@ octos.present=events[events$Behavior=="deploy_start"|
          events$Behavior=="deploy_start"|
          events$Behavior=="deploy_end",
          ]
+```
 
-octos.present$number=0
+Next, I make sure that the entries in this dataframe are in chonological order within each deployment.
+```{r}
 
 for (i in 1:length(deployments)){
   temp=octos.present[octos.present$`Deployment #`==deployments[i],]
   temp=temp[order(temp$realtime),]
   octos.present[octos.present$`Deployment #`==deployments[i],]=temp
 }
+```
 
+
+Now, I add a column to the dataframe called "number" that will be a tally of how many octopuses are in the frame.  I will start each deployment with the number at 0, add an octopus for each frame arrival and substract one octopus for each frame departure.
+```{r}
+octos.present$number=0
 
 for (i in 1:length(deployments)){
   behaviors=octos.present$Behavior[octos.present$`Deployment #`==deployments[i]]
@@ -651,7 +671,7 @@ for (i in 1:length(deployments)){
 ```
 
 
-adding end times to each entry.
+The dataframe I made has the start time for each time period, but not the end.  I will add the end by taking the starting time of the next time period.
 ```{r}
 octos.present$endtime=octos.present$realtime[1]
 
@@ -680,12 +700,15 @@ min.absent
 min.present
 ```
 
-Tallying a species arrivals when octopus is present versus absent
+## Kelp Greenling Analysis
+### Kelp Greenling visitation frequency with octopuses absent vs. present.
+In this chunk I am tallying kelp greenling arrivals when octopuses are present versus absent.
 ```{r}
 kelpies=numeric()
 
 for (i in 1:nrow(octos.present)){
   kelpies[i]=sum(events$Species=="kelp greenling"&
+    events$Behavior=="frame_arrival"&
     events$`Deployment #`==octos.present$`Deployment #`[i]&
     events$realtime>octos.present$realtime[i]&
     events$realtime<octos.present$endtime[i])
@@ -697,11 +720,164 @@ kelpies.absent
 kelpies.present
 ```
 
+Next I perform a chi square test to see if the kelp greenling visitation frequency is significantly different that random.Here, I am using the probability in each category (absent vs. present) as the proportion of time octopuses were absent versus present.
 ```{r}
 probs=c(min.absent/(min.absent+min.present),min.present/(min.absent+min.present))
 
 chisq.test(c(kelpies.absent,kelpies.present),p=probs)
-
 ```
 
 
+
+### Kelp greenling visitation duration when octopuses are absent versus present.
+First, I make dataframes to hold my visit duration information and catalog potential bad arrivals and departure entries.
+
+```{r}
+kelpie.visit=data.frame(deployment=as.numeric(NA),
+           time=as.POSIXct(NA),
+           duration=as.numeric(NA))
+
+kelpie.badarrival=data.frame(deployment=as.numeric(NA),
+           time1=as.POSIXct(NA),
+           time2=as.POSIXct(NA),
+           duration=as.numeric(NA))
+
+kelpie.baddepar=data.frame(deployment=as.numeric(NA),
+           time1=as.POSIXct(NA),
+           time2=as.POSIXct(NA),
+           duration=as.numeric(NA))
+
+```
+
+Next, I calculate the duration of each kelp greenling visit.
+
+```{r}
+
+
+for (i in 1:length(deployments)){
+  arrivals=events$realtime[events$Species=="kelp greenling"&
+                    events$Behavior=="frame_arrival"&
+                    events$`Deployment #`==deployments[i]]
+
+  departures=events$realtime[events$Species=="kelp greenling"&
+                    events$Behavior=="frame_departure"&
+                    events$`Deployment #`==deployments[i]]
+
+  if (length(arrivals)>0){
+  depar.tags=c(rep("arrive",length(arrivals)),rep("depart",length(departures)))
+
+  deploy.sub=data.frame(time=c(arrivals,departures),type=depar.tags)
+  deploy.sub=deploy.sub[order(deploy.sub$time),]
+
+
+
+      #Finding which arrivals are immediately followed by a departure
+      visit.depar=which(deploy.sub$type[1:(nrow(deploy.sub)-1)]=="arrive"&
+                          deploy.sub$type[2:nrow(deploy.sub)]=="depart")
+      # Now calculating the 
+      visit.dura=difftime(deploy.sub$time[visit.depar+1],deploy.sub$time[visit.depar],units = "min")
+      visit.stub=data.frame(deployment=rep(deployments[i],length(visit.dura)),
+                 time=deploy.sub$time[visit.depar],
+                 duration=as.numeric(visit.dura))
+      kelpie.visit=rbind(kelpie.visit,visit.stub)
+
+            # Finding arrivals followed immediately by another arrival (This should not be possible, so this is error locating)
+      badarrival.depar=which(deploy.sub$type[1:(nrow(deploy.sub)-1)]=="arrive"&
+                               deploy.sub$type[2:nrow(deploy.sub)]=="arrive")
+      badarrival.dura=difftime(deploy.sub$time[badarrival.depar+1],deploy.sub$time[badarrival.depar],units = "min")
+      badarrival.stub=data.frame(deployment=rep(deployments[i],length(badarrival.dura)),
+                 time1=deploy.sub$time[badarrival.depar],
+                 time2=deploy.sub$time[badarrival.depar+1],
+                 duration=as.numeric(badarrival.dura))
+      kelpie.badarrival=rbind(kelpie.badarrival,badarrival.stub)
+      
+      baddepar.depar=which(deploy.sub$type[1:(nrow(deploy.sub)-1)]=="depart"&
+                             deploy.sub$type[2:nrow(deploy.sub)]=="depart")
+      baddepar.dura=difftime(deploy.sub$time[baddepar.depar+1],deploy.sub$time[baddepar.depar],units = "min")
+      baddepar.stub=data.frame(deployment=rep(deployments[i],length(baddepar.dura)),
+                 time1=deploy.sub$time[baddepar.depar],
+                 time2=deploy.sub$time[baddepar.depar+1],
+                 duration=as.numeric(baddepar.dura))
+      kelpie.baddepar=rbind(kelpie.baddepar,baddepar.stub)
+
+      
+    }
+}
+
+
+kelpie.visit=kelpie.visit[complete.cases(kelpie.visit),]
+```
+
+
+Adding if octopuses are present or absent during each visit to my dataframe
+```{r}
+kelpie.visit$octopus="unknown"
+
+
+for (i in 1:nrow(octos.present)){
+  if (octos.present$number[i]>0){
+    kelpie.visit$octopus[kelpie.visit$deployment==octos.present$`Deployment #`[i]&
+                 kelpie.visit$time>octos.present$realtime[i]&
+                 kelpie.visit$time<octos.present$endtime[i]]="present"
+  }
+  if (octos.present$number[i]==0){
+    kelpie.visit$octopus[kelpie.visit$deployment==octos.present$`Deployment #`[i]&
+                 kelpie.visit$time>octos.present$realtime[i]&
+                 kelpie.visit$time<octos.present$endtime[i]]="absent"
+  }
+}
+
+kelpie.visit=kelpie.visit[!kelpie.visit$octopus=="unknown",]
+```
+
+
+Testing my assumptions for T-Test
+```{r}
+shapiro.test(kelpie.visit$duration[kelpie.visit$octopus=="present"])
+shapiro.test(kelpie.visit$duration[kelpie.visit$octopus=="absent"])
+bartlett.test(kelpie.visit$duration,kelpie.visit$octopus)
+```
+
+Assumptions fail, so I am using a permutation two-sample test.
+```{r}
+permTS(kelpie.visit$duration[kelpie.visit$octopus=="absent"],kelpie.visit$duration[kelpie.visit$octopus=="present"],
+       alternative="two.sided",method="exact.mc",control=permControl(nmc=10000))
+
+```
+Very significant!
+
+Seeing what the mean difference is between kelp greenling visit duration when octopuses are absent versus octopuses are present.
+```{r}
+aggregate(duration~octopus,data=kelpie.visit,FUN="mean")
+```
+Plotting the data.
+```{r}
+boxplot(duration~octopus,data=kelpie.visit,range=0)
+```
+
+This boxplot looks horrible so I am manually making boxplot with a broken Y-axis so the long tails don't obscure the main portion of the data.
+
+```{r}
+svg("Kelpy_visitation_duration.svg",width=3,height=3,pointsize = 6)
+par(fig=c(0,1,0.35,1))
+boxplot(duration~octopus,data=kelpie.visit,range=0,ylim=c(6,6.7),axes=F,ylab="",xlab="")
+axis(2,at=c(6,6.5))
+box()
+
+par(fig=c(0,1,0,0.65),new=T)
+boxplot(duration~octopus,data=kelpie.visit,range=0,ylim=c(0,0.7),axes=F,ylab="",xlab="")
+axis(2,at=c(0,0.5))
+axis(1,at=c(1,2),label=c("octopus absent","octopus present"),cex.axis=1.5)
+box()
+
+par(fig=c(0,1,0,1),new=T)
+plot(c(0,1),c(0,1),type="n",axes=F,ylab="",xlab="")
+mtext("Visit duration (min)",side=2,line=2.5,cex=1.5)
+
+dev.off()
+```
+```{bash}
+cairosvg Kelpy_visitation_duration.svg -o Kelpy_visitation_duration.png -d 300
+```
+
+![Kelp visit durations when octopuses are absent or present.](Kelpy_visitation_duration.png)
