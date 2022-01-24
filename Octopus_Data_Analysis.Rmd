@@ -438,9 +438,8 @@ fish11=events$Species=="wolf eel"
 fish12=events$Species=="flatfish"
 fish13=events$Species=="sailfin sculpin"
 
-fish=fish1+fish2+fish3+fish4+fish5+fish6+fish7+fish9+fish10+fish11+fish12+fish13
-fish=fish11
-
+#fish=fish1+fish2+fish3+fish4+fish5+fish6+fish7+fish9+fish10+fish11+fish12+fish13
+fish=fish8
 
 
 crabs1=events$Species=="red rock crab"
@@ -453,9 +452,9 @@ crabs7=events$Species=="sea_cucumber"
 crabs8=events$Species=="sea_star"
 
 
-crabs=crabs8
+crabs=crabs1
 
-to.plot=events$realtime[events$Behavior=="frame_arrival"&crabs]
+to.plot=events$realtime[events$Behavior=="frame_arrival"&fish]
 
 #png(filename="Ling_and_kelpies.png",width=1000,height=1000,res=200)
 DayHist(to.plot,date="07/10/2021",hist.zoom = 4)
@@ -852,7 +851,7 @@ aggregate(duration~octopus,data=kelpie.visit,FUN="mean")
 ```
 Plotting the data.
 ```{r}
-boxplot(duration~octopus,data=kelpie.visit,range=0)
+boxplot(duration~octopus,data=kelpie.visit,range=0, ylim=c(0,1))
 ```
 
 This boxplot looks horrible so I am manually making boxplot with a broken Y-axis so the long tails don't obscure the main portion of the data.
@@ -881,3 +880,558 @@ cairosvg Kelpy_visitation_duration.svg -o Kelpy_visitation_duration.png -d 300
 ```
 
 ![Kelp visit durations when octopuses are absent or present.](Kelpy_visitation_duration.png)
+
+
+
+## Lingcod Analysis
+### Lingcod visitation frequency with octopuses absent vs. present.
+In this chunk I am tallying Lingcod arrivals when octopuses are present versus absent.
+```{r}
+lings=numeric()
+
+for (i in 1:nrow(octos.present)){
+  lings[i]=sum(events$Species=="lingcod"&
+    events$Behavior=="frame_arrival"&
+    events$`Deployment #`==octos.present$`Deployment #`[i]&
+    events$realtime>octos.present$realtime[i]&
+    events$realtime<octos.present$endtime[i])
+}
+
+lings.absent=sum(lings[octos.present$number==0])
+lings.present=sum(lings[octos.present$number>0])
+lings.absent
+lings.present
+```
+
+Next I perform a chi square test to see if the lingcod visitation frequency is significantly different that random. Here, I am using the probability in each category (absent vs. present) as the proportion of time octopuses were absent versus present.
+```{r}
+probs=c(min.absent/(min.absent+min.present),min.present/(min.absent+min.present))
+
+chisq.test(c(lings.absent,lings.present),p=probs)
+```
+
+
+
+### lingcod visitation duration when octopuses are absent versus present.
+First, I make dataframes to hold my visit duration information and catalog potential bad arrivals and departure entries.
+
+```{r}
+ling.visit=data.frame(deployment=as.numeric(NA),
+           time=as.POSIXct(NA),
+           duration=as.numeric(NA))
+
+ling.badarrival=data.frame(deployment=as.numeric(NA),
+           time1=as.POSIXct(NA),
+           time2=as.POSIXct(NA),
+           duration=as.numeric(NA))
+
+ling.baddepar=data.frame(deployment=as.numeric(NA),
+           time1=as.POSIXct(NA),
+           time2=as.POSIXct(NA),
+           duration=as.numeric(NA))
+
+```
+
+Next, I calculate the duration of each lingcod visit.
+
+```{r}
+
+
+for (i in 1:length(deployments)){
+  arrivals=events$realtime[events$Species=="lingcod"&
+                    events$Behavior=="frame_arrival"&
+                    events$`Deployment #`==deployments[i]]
+
+  departures=events$realtime[events$Species=="lingcod"&
+                    events$Behavior=="frame_departure"&
+                    events$`Deployment #`==deployments[i]]
+
+  if (length(arrivals)>0){
+  depar.tags=c(rep("arrive",length(arrivals)),rep("depart",length(departures)))
+
+  deploy.sub=data.frame(time=c(arrivals,departures),type=depar.tags)
+  deploy.sub=deploy.sub[order(deploy.sub$time),]
+
+
+
+      #Finding which arrivals are immediately followed by a departure
+      visit.depar=which(deploy.sub$type[1:(nrow(deploy.sub)-1)]=="arrive"&
+                          deploy.sub$type[2:nrow(deploy.sub)]=="depart")
+      # Now calculating the 
+      visit.dura=difftime(deploy.sub$time[visit.depar+1],deploy.sub$time[visit.depar],units = "min")
+      visit.stub=data.frame(deployment=rep(deployments[i],length(visit.dura)),
+                 time=deploy.sub$time[visit.depar],
+                 duration=as.numeric(visit.dura))
+      ling.visit=rbind(ling.visit,visit.stub)
+
+            # Finding arrivals followed immediately by another arrival (This should not be possible, so this is error locating)
+      badarrival.depar=which(deploy.sub$type[1:(nrow(deploy.sub)-1)]=="arrive"&
+                               deploy.sub$type[2:nrow(deploy.sub)]=="arrive")
+      badarrival.dura=difftime(deploy.sub$time[badarrival.depar+1],deploy.sub$time[badarrival.depar],units = "min")
+      badarrival.stub=data.frame(deployment=rep(deployments[i],length(badarrival.dura)),
+                 time1=deploy.sub$time[badarrival.depar],
+                 time2=deploy.sub$time[badarrival.depar+1],
+                 duration=as.numeric(badarrival.dura))
+      ling.badarrival=rbind(ling.badarrival,badarrival.stub)
+      
+      baddepar.depar=which(deploy.sub$type[1:(nrow(deploy.sub)-1)]=="depart"&
+                             deploy.sub$type[2:nrow(deploy.sub)]=="depart")
+      baddepar.dura=difftime(deploy.sub$time[baddepar.depar+1],deploy.sub$time[baddepar.depar],units = "min")
+      baddepar.stub=data.frame(deployment=rep(deployments[i],length(baddepar.dura)),
+                 time1=deploy.sub$time[baddepar.depar],
+                 time2=deploy.sub$time[baddepar.depar+1],
+                 duration=as.numeric(baddepar.dura))
+      ling.baddepar=rbind(ling.baddepar,baddepar.stub)
+
+      
+    }
+}
+
+
+ling.visit=ling.visit[complete.cases(ling.visit),]
+ling.visit
+```
+
+
+Adding if octopuses are present or absent during each visit to my dataframe
+```{r}
+ling.visit$octopus="unknown"
+
+
+for (i in 1:nrow(octos.present)){
+  if (octos.present$number[i]>0){
+    ling.visit$octopus[ling.visit$deployment==octos.present$`Deployment #`[i]&
+                 ling.visit$time>octos.present$realtime[i]&
+                 ling.visit$time<octos.present$endtime[i]]="present"
+  }
+  if (octos.present$number[i]==0){
+    ling.visit$octopus[ling.visit$deployment==octos.present$`Deployment #`[i]&
+                 ling.visit$time>octos.present$realtime[i]&
+                 ling.visit$time<octos.present$endtime[i]]="absent"
+  }
+}
+
+ling.visit=ling.visit[!ling.visit$octopus=="unknown",]
+```
+
+
+Testing my assumptions for T-Test
+```{r}
+shapiro.test(ling.visit$duration[ling.visit$octopus=="present"])
+shapiro.test(ling.visit$duration[ling.visit$octopus=="absent"])
+bartlett.test(ling.visit$duration,ling.visit$octopus)
+```
+
+Assumptions fail, so I am using a permutation two-sample test.
+```{r}
+permTS(ling.visit$duration[ling.visit$octopus=="absent"],ling.visit$duration[ling.visit$octopus=="present"],
+       alternative="two.sided",method="exact.mc",control=permControl(nmc=10000))
+
+```
+Very significant!
+
+Seeing what the mean difference is between lingcod visit duration when octopuses are absent versus octopuses are present.
+```{r}
+aggregate(duration~octopus,data=ling.visit,FUN="mean")
+```
+Plotting the data.
+```{r}
+boxplot(duration~octopus,data=ling.visit,range=0, ylim=c(0,0.15))
+```
+
+This boxplot looks horrible so I am manually making boxplot with a broken Y-axis so the long tails don't obscure the main portion of the data.
+
+```{r}
+svg("Lingcod_visitation_duration.svg",width=3,height=3,pointsize = 6)
+par(fig=c(0,1,0.35,1))
+boxplot(duration~octopus,data=ling.visit,range=0,ylim=c(6,6.7),axes=F,ylab="",xlab="")
+axis(2,at=c(6,6.5))
+box()
+
+par(fig=c(0,1,0,0.65),new=T)
+boxplot(duration~octopus,data=ling.visit,range=0,ylim=c(0,0.7),axes=F,ylab="",xlab="")
+axis(2,at=c(0,0.5))
+axis(1,at=c(1,2),label=c("octopus absent","octopus present"),cex.axis=1.5)
+box()
+
+par(fig=c(0,1,0,1),new=T)
+plot(c(0,1),c(0,1),type="n",axes=F,ylab="",xlab="")
+mtext("Visit duration (min)",side=2,line=2.5,cex=1.5)
+
+dev.off()
+```
+```{bash}
+cairosvg Lingcod_visitation_duration.svg -o Lingcod_visitation_duration.png -d 300
+```
+
+![Lingcod visit durations when octopuses are absent or present.](Lingcod_visitation_duration.png)
+
+
+## Rockfish Analysis
+### Rockfish visitation frequency with octopuses absent vs. present.
+In this chunk I am tallying Rockfish arrivals when octopuses are present versus absent.
+```{r}
+rocks=numeric()
+
+for (i in 1:nrow(octos.present)){
+  rocks[i]=sum(events$Species=="rockfish"&
+    events$Behavior=="frame_arrival"&
+    events$`Deployment #`==octos.present$`Deployment #`[i]&
+    events$realtime>octos.present$realtime[i]&
+    events$realtime<octos.present$endtime[i])
+}
+
+rocks.absent=sum(rocks[octos.present$number==0])
+rocks.present=sum(rocks[octos.present$number>0])
+rocks.absent
+rocks.present
+
+```
+
+Next I perform a chi square test to see if the rockfish visitation frequency is significantly different that random. Here, I am using the probability in each category (absent vs. present) as the proportion of time octopuses were absent versus present.
+```{r}
+probs=c(min.absent/(min.absent+min.present),min.present/(min.absent+min.present))
+
+chisq.test(c(rocks.absent,rocks.present),p=probs)
+```
+
+
+
+### rockfish visitation duration when octopuses are absent versus present.
+First, I make dataframes to hold my visit duration information and catalog potential bad arrivals and departure entries.
+
+```{r}
+rock.visit=data.frame(deployment=as.numeric(NA),
+           time=as.POSIXct(NA),
+           duration=as.numeric(NA))
+
+rock.badarrival=data.frame(deployment=as.numeric(NA),
+           time1=as.POSIXct(NA),
+           time2=as.POSIXct(NA),
+           duration=as.numeric(NA))
+
+rock.baddepar=data.frame(deployment=as.numeric(NA),
+           time1=as.POSIXct(NA),
+           time2=as.POSIXct(NA),
+           duration=as.numeric(NA))
+
+```
+
+Next, I calculate the duration of each rockfish visit.
+
+```{r}
+
+
+for (i in 1:length(deployments)){
+  arrivals=events$realtime[events$Species=="rockfish"&
+                    events$Behavior=="frame_arrival"&
+                    events$`Deployment #`==deployments[i]]
+
+  departures=events$realtime[events$Species=="rockfish"&
+                    events$Behavior=="frame_departure"&
+                    events$`Deployment #`==deployments[i]]
+
+  if (length(arrivals)>0){
+  depar.tags=c(rep("arrive",length(arrivals)),rep("depart",length(departures)))
+
+  deploy.sub=data.frame(time=c(arrivals,departures),type=depar.tags)
+  deploy.sub=deploy.sub[order(deploy.sub$time),]
+
+
+
+      #Finding which arrivals are immediately followed by a departure
+      visit.depar=which(deploy.sub$type[1:(nrow(deploy.sub)-1)]=="arrive"&
+                          deploy.sub$type[2:nrow(deploy.sub)]=="depart")
+      # Now calculating the 
+      visit.dura=difftime(deploy.sub$time[visit.depar+1],deploy.sub$time[visit.depar],units = "min")
+      visit.stub=data.frame(deployment=rep(deployments[i],length(visit.dura)),
+                 time=deploy.sub$time[visit.depar],
+                 duration=as.numeric(visit.dura))
+      rock.visit=rbind(rock.visit,visit.stub)
+
+            # Finding arrivals followed immediately by another arrival (This should not be possible, so this is error locating)
+      badarrival.depar=which(deploy.sub$type[1:(nrow(deploy.sub)-1)]=="arrive"&
+                               deploy.sub$type[2:nrow(deploy.sub)]=="arrive")
+      badarrival.dura=difftime(deploy.sub$time[badarrival.depar+1],deploy.sub$time[badarrival.depar],units = "min")
+      badarrival.stub=data.frame(deployment=rep(deployments[i],length(badarrival.dura)),
+                 time1=deploy.sub$time[badarrival.depar],
+                 time2=deploy.sub$time[badarrival.depar+1],
+                 duration=as.numeric(badarrival.dura))
+      rock.badarrival=rbind(rock.badarrival,badarrival.stub)
+      
+      baddepar.depar=which(deploy.sub$type[1:(nrow(deploy.sub)-1)]=="depart"&
+                             deploy.sub$type[2:nrow(deploy.sub)]=="depart")
+      baddepar.dura=difftime(deploy.sub$time[baddepar.depar+1],deploy.sub$time[baddepar.depar],units = "min")
+      baddepar.stub=data.frame(deployment=rep(deployments[i],length(baddepar.dura)),
+                 time1=deploy.sub$time[baddepar.depar],
+                 time2=deploy.sub$time[baddepar.depar+1],
+                 duration=as.numeric(baddepar.dura))
+      rock.baddepar=rbind(rock.baddepar,baddepar.stub)
+
+      
+    }
+}
+
+
+rock.visit=rock.visit[complete.cases(rock.visit),]
+```
+
+
+Adding if octopuses are present or absent during each visit to my dataframe
+```{r}
+rock.visit$octopus="unknown"
+
+
+for (i in 1:nrow(octos.present)){
+  if (octos.present$number[i]>0){
+    rock.visit$octopus[rock.visit$deployment==octos.present$`Deployment #`[i]&
+                 rock.visit$time>octos.present$realtime[i]&
+                 rock.visit$time<octos.present$endtime[i]]="present"
+  }
+  if (octos.present$number[i]==0){
+    rock.visit$octopus[rock.visit$deployment==octos.present$`Deployment #`[i]&
+                 rock.visit$time>octos.present$realtime[i]&
+                 rock.visit$time<octos.present$endtime[i]]="absent"
+  }
+}
+
+rock.visit=rock.visit[!rock.visit$octopus=="unknown",]
+```
+
+
+Testing my assumptions for T-Test
+```{r}
+shapiro.test(rock.visit$duration[rock.visit$octopus=="present"])
+shapiro.test(rock.visit$duration[rock.visit$octopus=="absent"])
+bartlett.test(rock.visit$duration,rock.visit$octopus)
+```
+
+Assumptions fail, so I am using a permutation two-sample test.
+```{r}
+permTS(rock.visit$duration[rock.visit$octopus=="absent"],rock.visit$duration[rock.visit$octopus=="present"],
+       alternative="two.sided",method="exact.mc",control=permControl(nmc=10000))
+
+```
+Very significant!
+
+Seeing what the mean difference is between lingcod visit duration when octopuses are absent versus octopuses are present.
+```{r}
+aggregate(duration~octopus,data=rock.visit,FUN="mean")
+```
+Plotting the data.
+```{r}
+boxplot(duration~octopus,data=rock.visit,range=0, ylim=c(0,0.5))
+```
+
+This boxplot looks horrible so I am manually making boxplot with a broken Y-axis so the long tails don't obscure the main portion of the data.
+
+```{r}
+svg("Rockfish_visitation_duration.svg",width=3,height=3,pointsize = 6)
+par(fig=c(0,1,0.35,1))
+boxplot(duration~octopus,data=rock.visit,range=0,ylim=c(6,6.7),axes=F,ylab="",xlab="")
+axis(2,at=c(6,6.5))
+box()
+
+par(fig=c(0,1,0,0.65),new=T)
+boxplot(duration~octopus,data=rock.visit,range=0,ylim=c(0,0.7),axes=F,ylab="",xlab="")
+axis(2,at=c(0,0.5))
+axis(1,at=c(1,2),label=c("octopus absent","octopus present"),cex.axis=1.5)
+box()
+
+par(fig=c(0,1,0,1),new=T)
+plot(c(0,1),c(0,1),type="n",axes=F,ylab="",xlab="")
+mtext("Visit duration (min)",side=2,line=2.5,cex=1.5)
+
+dev.off()
+```
+```{bash}
+cairosvg Rockfish_visitation_duration.svg -o Rockfish_visitation_duration.png -d 300
+```
+
+![Rockfish visit durations when octopuses are absent or present.](Rockfish_visitation_duration.png)
+
+
+
+## Crab Analysis
+### Crab visitation frequency with octopuses absent vs. present.
+In this chunk I am tallying Crab arrivals when octopuses are present versus absent.
+```{r}
+crabs=numeric()
+
+for (i in 1:nrow(octos.present)){
+  crabs[i]=sum(events$Species=="red rock crab"&
+    events$Behavior=="frame_arrival"&
+    events$`Deployment #`==octos.present$`Deployment #`[i]&
+    events$realtime>octos.present$realtime[i]&
+    events$realtime<octos.present$endtime[i])
+}
+
+crabs.absent=sum(crabs[octos.present$number==0])
+crabs.present=sum(crabs[octos.present$number>0])
+crabs.absent
+crabs.present
+```
+
+Next I perform a chi square test to see if the crabs visitation frequency is significantly different that random. Here, I am using the probability in each category (absent vs. present) as the proportion of time octopuses were absent versus present.
+```{r}
+probs=c(min.absent/(min.absent+min.present),min.present/(min.absent+min.present))
+
+chisq.test(c(crabs.absent,crabs.present),p=probs)
+```
+
+
+
+### crab visitation duration when octopuses are absent versus present.
+First, I make dataframes to hold my visit duration information and catalog potential bad arrivals and departure entries.
+
+```{r}
+crab.visit=data.frame(deployment=as.numeric(NA),
+           time=as.POSIXct(NA),
+           duration=as.numeric(NA))
+
+crab.badarrival=data.frame(deployment=as.numeric(NA),
+           time1=as.POSIXct(NA),
+           time2=as.POSIXct(NA),
+           duration=as.numeric(NA))
+
+crab.baddepar=data.frame(deployment=as.numeric(NA),
+           time1=as.POSIXct(NA),
+           time2=as.POSIXct(NA),
+           duration=as.numeric(NA))
+
+```
+
+Next, I calculate the duration of each crab visit.
+
+```{r}
+
+
+for (i in 1:length(deployments)){
+  arrivals=events$realtime[events$Species=="red rock crab"&
+                    events$Behavior=="frame_arrival"&
+                    events$`Deployment #`==deployments[i]]
+
+  departures=events$realtime[events$Species=="red rock crab"&
+                    events$Behavior=="frame_departure"&
+                    events$`Deployment #`==deployments[i]]
+
+  if (length(arrivals)>0){
+  depar.tags=c(rep("arrive",length(arrivals)),rep("depart",length(departures)))
+
+  deploy.sub=data.frame(time=c(arrivals,departures),type=depar.tags)
+  deploy.sub=deploy.sub[order(deploy.sub$time),]
+
+
+
+      #Finding which arrivals are immediately followed by a departure
+      visit.depar=which(deploy.sub$type[1:(nrow(deploy.sub)-1)]=="arrive"&
+                          deploy.sub$type[2:nrow(deploy.sub)]=="depart")
+      # Now calculating the 
+      visit.dura=difftime(deploy.sub$time[visit.depar+1],deploy.sub$time[visit.depar],units = "min")
+      visit.stub=data.frame(deployment=rep(deployments[i],length(visit.dura)),
+                 time=deploy.sub$time[visit.depar],
+                 duration=as.numeric(visit.dura))
+      crab.visit=rbind(crab.visit,visit.stub)
+
+            # Finding arrivals followed immediately by another arrival (This should not be possible, so this is error locating)
+      badarrival.depar=which(deploy.sub$type[1:(nrow(deploy.sub)-1)]=="arrive"&
+                               deploy.sub$type[2:nrow(deploy.sub)]=="arrive")
+      badarrival.dura=difftime(deploy.sub$time[badarrival.depar+1],deploy.sub$time[badarrival.depar],units = "min")
+      badarrival.stub=data.frame(deployment=rep(deployments[i],length(badarrival.dura)),
+                 time1=deploy.sub$time[badarrival.depar],
+                 time2=deploy.sub$time[badarrival.depar+1],
+                 duration=as.numeric(badarrival.dura))
+      crab.badarrival=rbind(crab.badarrival,badarrival.stub)
+      
+      baddepar.depar=which(deploy.sub$type[1:(nrow(deploy.sub)-1)]=="depart"&
+                             deploy.sub$type[2:nrow(deploy.sub)]=="depart")
+      baddepar.dura=difftime(deploy.sub$time[baddepar.depar+1],deploy.sub$time[baddepar.depar],units = "min")
+      baddepar.stub=data.frame(deployment=rep(deployments[i],length(baddepar.dura)),
+                 time1=deploy.sub$time[baddepar.depar],
+                 time2=deploy.sub$time[baddepar.depar+1],
+                 duration=as.numeric(baddepar.dura))
+      crab.baddepar=rbind(crab.baddepar,baddepar.stub)
+
+      
+    }
+}
+
+
+crab.visit=crab.visit[complete.cases(crab.visit),]
+```
+
+
+Adding if octopuses are present or absent during each visit to my dataframe
+```{r}
+crab.visit$octopus="unknown"
+
+
+for (i in 1:nrow(octos.present)){
+  if (octos.present$number[i]>0){
+    crab.visit$octopus[crab.visit$deployment==octos.present$`Deployment #`[i]&
+                 crab.visit$time>octos.present$realtime[i]&
+                 crab.visit$time<octos.present$endtime[i]]="present"
+  }
+  if (octos.present$number[i]==0){
+    crab.visit$octopus[crab.visit$deployment==octos.present$`Deployment #`[i]&
+                 crab.visit$time>octos.present$realtime[i]&
+                 crab.visit$time<octos.present$endtime[i]]="absent"
+  }
+}
+
+crab.visit=crab.visit[!crab.visit$octopus=="unknown",]
+```
+
+
+Testing my assumptions for T-Test
+```{r}
+shapiro.test(crab.visit$duration[crab.visit$octopus=="present"])
+shapiro.test(crab.visit$duration[crab.visit$octopus=="absent"])
+bartlett.test(crab.visit$duration,crab.visit$octopus)
+```
+
+Assumptions fail, so I am using a permutation two-sample test.
+```{r}
+permTS(crab.visit$duration[crab.visit$octopus=="absent"],crab.visit$duration[crab.visit$octopus=="present"],
+       alternative="two.sided",method="exact.mc",control=permControl(nmc=10000))
+
+```
+Not significant!
+
+Seeing what the mean difference is between lingcod visit duration when octopuses are absent versus octopuses are present.
+```{r}
+aggregate(duration~octopus,data=crab.visit,FUN="mean")
+```
+Plotting the data.
+```{r}
+boxplot(duration~octopus,data=crab.visit,range=0, ylim=c(0,3))
+```
+
+This boxplot looks horrible so I am manually making boxplot with a broken Y-axis so the long tails don't obscure the main portion of the data.
+
+```{r}
+svg("Redrockcrab_visitation_duration.svg",width=3,height=3,pointsize = 6)
+par(fig=c(0,1,0.35,1))
+boxplot(duration~octopus,data=crab.visit,range=0,ylim=c(6,6.7),axes=F,ylab="",xlab="")
+axis(2,at=c(6,6.5))
+box()
+
+par(fig=c(0,1,0,0.65),new=T)
+boxplot(duration~octopus,data=crab.visit,range=0,ylim=c(0,0.7),axes=F,ylab="",xlab="")
+axis(2,at=c(0,0.5))
+axis(1,at=c(1,2),label=c("octopus absent","octopus present"),cex.axis=1.5)
+box()
+
+par(fig=c(0,1,0,1),new=T)
+plot(c(0,1),c(0,1),type="n",axes=F,ylab="",xlab="")
+mtext("Visit duration (min)",side=2,line=2.5,cex=1.5)
+
+dev.off()
+```
+
+
+```{bash}
+cairosvg Redrockcrab_visitation_duration.svg -o Redrockcrab_visitation_duration.png -d 300
+```
+
+![Crab visit durations when octopuses are absent or present.](Redrockcrab_visitation_duration.png)
