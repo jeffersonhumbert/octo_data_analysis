@@ -1435,3 +1435,5 @@ cairosvg Redrockcrab_visitation_duration.svg -o Redrockcrab_visitation_duration.
 ```
 
 ![Crab visit durations when octopuses are absent or present.](Redrockcrab_visitation_duration.png)
+
+   
