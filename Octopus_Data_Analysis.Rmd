@@ -16,6 +16,7 @@ library(maptools)
 library(circular)
 library(plotrix)
 library(perm)
+library(vcd)
 ```
 
 # Grabbing data and cleaning
@@ -454,10 +455,10 @@ crabs8=events$Species=="sea_star"
 
 crabs=crabs1
 
-to.plot=events$realtime[events$Behavior=="frame_arrival"&fish]
+to.plot=events$realtime[events$Behavior=="frame_departure"&fish]
 
 #png(filename="Ling_and_kelpies.png",width=1000,height=1000,res=200)
-DayHist(to.plot,date="07/10/2021",hist.zoom = 4)
+DayHist(to.plot,date="07/10/2021",hist.zoom = 6)
 #dev.off()
 to.plot
 ```
@@ -1435,5 +1436,29 @@ cairosvg Redrockcrab_visitation_duration.svg -o Redrockcrab_visitation_duration.
 ```
 
 ![Crab visit durations when octopuses are absent or present.](Redrockcrab_visitation_duration.png)
+
+
+##
+```{r}
+require(vcd)
+contingency.tab = as.table(rbind(
+                     c(28,   56),
+                     c(14,   2),
+                     c( 53,   11) ))
+names(dimnames(contingency.tab)) = c("Behavior", "Time")
+rownames(contingency.tab)        = c("Fortify", "Conspecific", "Travel")
+colnames(contingency.tab)        = c("Morning", "Evening")
+contingency.tab
+
+#                        Time
+# Behavior                   morning     evening
+#   Fortify                      23        126      
+#   Conspecific Interactions     14         2     
+#   frame departure              53         11
+
+mosaic(contingency.tab, shade=T, legend=T)
+assoc(contingency.tab, shade=T, legend=T)
+
+```
 
    
