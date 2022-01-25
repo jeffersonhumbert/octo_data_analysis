@@ -16,6 +16,7 @@ library(maptools)
 library(circular)
 library(plotrix)
 library(perm)
+library(corrplot)
 ```
 
 # Grabbing data and cleaning
@@ -829,6 +830,52 @@ for (i in 1:nrow(octos.present)){
 kelpie.visit=kelpie.visit[!kelpie.visit$octopus=="unknown",]
 ```
 
+Adding if each kelpie visit was during the day or the night
+```{r}
+kelpie.visit$daynight="night"
+kelpie.visit$day_expected=0
+
+for (i in 1:nrow(kelpie.visit)){
+  sunrise=sunriset(bay, as.POSIXct(kelpie.visit$time[i]), direction="sunrise", POSIXct.out=TRUE)$time
+  sunset=sunriset(bay,  as.POSIXct(kelpie.visit$time[i]), direction="sunset", POSIXct.out=TRUE)$time
+  if (kelpie.visit$time[i]>sunrise&kelpie.visit$time[i]<sunset) {
+    kelpie.visit$daynight[i]="day"
+  }
+  kelpie.visit$day_expected[i]=as.numeric(difftime(sunset,sunrise,units="hours"))/24
+}
+```
+
+Getting distribution of observations for chi-squared test
+```{r}
+kelpie.tab=
+  as.vector(table(kelpie.visit$octopus,kelpie.visit$daynight))
+```
+
+
+Setting up probabilities for chi-squared test
+```{r}
+kelpie.probs=
+  c(
+    c(min.absent/(min.absent+min.present),min.present/(min.absent+min.present))*mean(kelpie.visit$day_expected),
+    c(min.absent/(min.absent+min.present),min.present/(min.absent+min.present))*(1-mean(kelpie.visit$day_expected))
+  )
+```
+
+Running chi-squared test
+```{r}
+kelpie.chi=chisq.test(kelpie.tab,p=kelpie.probs)
+```
+
+Plotting chi-squared residuals
+```{r}
+kelpie.res=matrix(kelpie.chi$residuals,ncol=2)
+colnames(kelpie.res)=c("day","night")
+rownames(kelpie.res)=c("octopus absent","octopus present")
+
+corrplot(kelpie.res,is.cor=F,col.lim=c(-10,10))
+```
+
+
 
 Testing my assumptions for T-Test
 ```{r}
@@ -1014,6 +1061,51 @@ for (i in 1:nrow(octos.present)){
 ling.visit=ling.visit[!ling.visit$octopus=="unknown",]
 ```
 
+Adding if each ling visit was during the day or the night
+```{r}
+ling.visit$daynight="night"
+ling.visit$day_expected=0
+
+for (i in 1:nrow(ling.visit)){
+  sunrise=sunriset(bay, as.POSIXct(ling.visit$time[i]), direction="sunrise", POSIXct.out=TRUE)$time
+  sunset=sunriset(bay,  as.POSIXct(ling.visit$time[i]), direction="sunset", POSIXct.out=TRUE)$time
+  if (ling.visit$time[i]>sunrise&ling.visit$time[i]<sunset) {
+    ling.visit$daynight[i]="day"
+  }
+  ling.visit$day_expected[i]=as.numeric(difftime(sunset,sunrise,units="hours"))/24
+}
+```
+
+Getting distribution of observations for chi-squared test
+```{r}
+ling.tab=
+  as.vector(table(ling.visit$octopus,ling.visit$daynight))
+```
+
+
+Setting up probabilities for chi-squared test
+```{r}
+ling.probs=
+  c(
+    c(min.absent/(min.absent+min.present),min.present/(min.absent+min.present))*mean(ling.visit$day_expected),
+    c(min.absent/(min.absent+min.present),min.present/(min.absent+min.present))*(1-mean(ling.visit$day_expected))
+  )
+```
+
+Running chi-squared test
+```{r}
+ling.chi=chisq.test(ling.tab,p=ling.probs)
+ling.chi
+```
+
+Plotting chi-squared residuals
+```{r}
+ling.res=matrix(ling.chi$residuals,ncol=2)
+colnames(ling.res)=c("day","night")
+rownames(ling.res)=c("octopus absent","octopus present")
+
+corrplot(ling.res,is.cor=F,col.lim=c(-10,10))
+```
 
 Testing my assumptions for T-Test
 ```{r}
@@ -1028,7 +1120,7 @@ permTS(ling.visit$duration[ling.visit$octopus=="absent"],ling.visit$duration[lin
        alternative="two.sided",method="exact.mc",control=permControl(nmc=10000))
 
 ```
-Very significant!
+Not significant
 
 Seeing what the mean difference is between lingcod visit duration when octopuses are absent versus octopuses are present.
 ```{r}
@@ -1036,7 +1128,7 @@ aggregate(duration~octopus,data=ling.visit,FUN="mean")
 ```
 Plotting the data.
 ```{r}
-boxplot(duration~octopus,data=ling.visit,range=0, ylim=c(0,0.15))
+boxplot(duration~octopus,data=ling.visit,range=0)
 ```
 
 This boxplot looks horrible so I am manually making boxplot with a broken Y-axis so the long tails don't obscure the main portion of the data.
@@ -1044,13 +1136,13 @@ This boxplot looks horrible so I am manually making boxplot with a broken Y-axis
 ```{r}
 svg("Lingcod_visitation_duration.svg",width=3,height=3,pointsize = 6)
 par(fig=c(0,1,0.35,1))
-boxplot(duration~octopus,data=ling.visit,range=0,ylim=c(6,6.7),axes=F,ylab="",xlab="")
+boxplot(duration~octopus,data=ling.visit,range=0,ylim=c(2,9),axes=F,ylab="",xlab="")
 axis(2,at=c(6,6.5))
 box()
 
 par(fig=c(0,1,0,0.65),new=T)
-boxplot(duration~octopus,data=ling.visit,range=0,ylim=c(0,0.7),axes=F,ylab="",xlab="")
-axis(2,at=c(0,0.5))
+boxplot(duration~octopus,data=ling.visit,range=0,ylim=c(0,0.15),axes=F,ylab="",xlab="")
+axis(2,at=c(0,0.15))
 axis(1,at=c(1,2),label=c("octopus absent","octopus present"),cex.axis=1.5)
 box()
 
@@ -1198,6 +1290,51 @@ for (i in 1:nrow(octos.present)){
 rock.visit=rock.visit[!rock.visit$octopus=="unknown",]
 ```
 
+Adding if each rock visit was during the day or the night
+```{r}
+rock.visit$daynight="night"
+rock.visit$day_expected=0
+
+for (i in 1:nrow(rock.visit)){
+  sunrise=sunriset(bay, as.POSIXct(rock.visit$time[i]), direction="sunrise", POSIXct.out=TRUE)$time
+  sunset=sunriset(bay,  as.POSIXct(rock.visit$time[i]), direction="sunset", POSIXct.out=TRUE)$time
+  if (rock.visit$time[i]>sunrise&rock.visit$time[i]<sunset) {
+    rock.visit$daynight[i]="day"
+  }
+  rock.visit$day_expected[i]=as.numeric(difftime(sunset,sunrise,units="hours"))/24
+}
+```
+
+Getting distribution of observations for chi-squared test
+```{r}
+rock.tab=
+  as.vector(table(rock.visit$octopus,rock.visit$daynight))
+```
+
+
+Setting up probabilities for chi-squared test
+```{r}
+rock.probs=
+  c(
+    c(min.absent/(min.absent+min.present),min.present/(min.absent+min.present))*mean(rock.visit$day_expected),
+    c(min.absent/(min.absent+min.present),min.present/(min.absent+min.present))*(1-mean(rock.visit$day_expected))
+  )
+```
+
+Running chi-squared test
+```{r}
+rock.chi=chisq.test(rock.tab,p=rock.probs)
+rock.chi
+```
+
+Plotting chi-squared residuals
+```{r}
+rock.res=matrix(rock.chi$residuals,ncol=2)
+colnames(rock.res)=c("day","night")
+rownames(rock.res)=c("octopus absent","octopus present")
+
+corrplot(rock.res,is.cor=F,col.lim=c(-10,10))
+```
 
 Testing my assumptions for T-Test
 ```{r}
@@ -1220,7 +1357,7 @@ aggregate(duration~octopus,data=rock.visit,FUN="mean")
 ```
 Plotting the data.
 ```{r}
-boxplot(duration~octopus,data=rock.visit,range=0, ylim=c(0,0.5))
+boxplot(duration~octopus,data=rock.visit,range=0,ylim=c(0,0.5))
 ```
 
 This boxplot looks horrible so I am manually making boxplot with a broken Y-axis so the long tails don't obscure the main portion of the data.
@@ -1228,12 +1365,12 @@ This boxplot looks horrible so I am manually making boxplot with a broken Y-axis
 ```{r}
 svg("Rockfish_visitation_duration.svg",width=3,height=3,pointsize = 6)
 par(fig=c(0,1,0.35,1))
-boxplot(duration~octopus,data=rock.visit,range=0,ylim=c(6,6.7),axes=F,ylab="",xlab="")
-axis(2,at=c(6,6.5))
+boxplot(duration~octopus,data=rock.visit,range=0,ylim=c(9.5,20),axes=F,ylab="",xlab="")
+axis(2,at=c(10,15,20))
 box()
 
 par(fig=c(0,1,0,0.65),new=T)
-boxplot(duration~octopus,data=rock.visit,range=0,ylim=c(0,0.7),axes=F,ylab="",xlab="")
+boxplot(duration~octopus,data=rock.visit,range=0,ylim=c(0,0.5),axes=F,ylab="",xlab="")
 axis(2,at=c(0,0.5))
 axis(1,at=c(1,2),label=c("octopus absent","octopus present"),cex.axis=1.5)
 box()
@@ -1244,6 +1381,7 @@ mtext("Visit duration (min)",side=2,line=2.5,cex=1.5)
 
 dev.off()
 ```
+
 ```{bash}
 cairosvg Rockfish_visitation_duration.svg -o Rockfish_visitation_duration.png -d 300
 ```
@@ -1382,6 +1520,51 @@ for (i in 1:nrow(octos.present)){
 crab.visit=crab.visit[!crab.visit$octopus=="unknown",]
 ```
 
+Adding if each crab visit was during the day or the night
+```{r}
+crab.visit$daynight="night"
+crab.visit$day_expected=0
+
+for (i in 1:nrow(crab.visit)){
+  sunrise=sunriset(bay, as.POSIXct(crab.visit$time[i]), direction="sunrise", POSIXct.out=TRUE)$time
+  sunset=sunriset(bay,  as.POSIXct(crab.visit$time[i]), direction="sunset", POSIXct.out=TRUE)$time
+  if (crab.visit$time[i]>sunrise&crab.visit$time[i]<sunset) {
+    crab.visit$daynight[i]="day"
+  }
+  crab.visit$day_expected[i]=as.numeric(difftime(sunset,sunrise,units="hours"))/24
+}
+```
+
+Getting distribution of observations for chi-squared test
+```{r}
+crab.tab=
+  as.vector(table(crab.visit$octopus,crab.visit$daynight))
+```
+
+
+Setting up probabilities for chi-squared test
+```{r}
+crab.probs=
+  c(
+    c(min.absent/(min.absent+min.present),min.present/(min.absent+min.present))*mean(crab.visit$day_expected),
+    c(min.absent/(min.absent+min.present),min.present/(min.absent+min.present))*(1-mean(crab.visit$day_expected))
+  )
+```
+
+Running chi-squared test
+```{r}
+crab.chi=chisq.test(crab.tab,p=crab.probs)
+crab.chi
+```
+
+Plotting chi-squared residuals
+```{r}
+crab.res=matrix(crab.chi$residuals,ncol=2)
+colnames(crab.res)=c("day","night")
+rownames(crab.res)=c("octopus absent","octopus present")
+
+corrplot(crab.res,is.cor=F,col.lim=c(-10,10))
+```
 
 Testing my assumptions for T-Test
 ```{r}
@@ -1404,7 +1587,7 @@ aggregate(duration~octopus,data=crab.visit,FUN="mean")
 ```
 Plotting the data.
 ```{r}
-boxplot(duration~octopus,data=crab.visit,range=0, ylim=c(0,3))
+boxplot(duration~octopus,data=crab.visit,range=0)
 ```
 
 This boxplot looks horrible so I am manually making boxplot with a broken Y-axis so the long tails don't obscure the main portion of the data.
@@ -1412,13 +1595,13 @@ This boxplot looks horrible so I am manually making boxplot with a broken Y-axis
 ```{r}
 svg("Redrockcrab_visitation_duration.svg",width=3,height=3,pointsize = 6)
 par(fig=c(0,1,0.35,1))
-boxplot(duration~octopus,data=crab.visit,range=0,ylim=c(6,6.7),axes=F,ylab="",xlab="")
-axis(2,at=c(6,6.5))
+boxplot(duration~octopus,data=crab.visit,range=0,ylim=c(30,60),axes=F,ylab="",xlab="")
+axis(2,at=c(30,40,50,60))
 box()
 
 par(fig=c(0,1,0,0.65),new=T)
-boxplot(duration~octopus,data=crab.visit,range=0,ylim=c(0,0.7),axes=F,ylab="",xlab="")
-axis(2,at=c(0,0.5))
+boxplot(duration~octopus,data=crab.visit,range=0,ylim=c(0,3),axes=F,ylab="",xlab="")
+axis(2,at=c(0,1,2,3))
 axis(1,at=c(1,2),label=c("octopus absent","octopus present"),cex.axis=1.5)
 box()
 
@@ -1435,3 +1618,42 @@ cairosvg Redrockcrab_visitation_duration.svg -o Redrockcrab_visitation_duration.
 ```
 
 ![Crab visit durations when octopuses are absent or present.](Redrockcrab_visitation_duration.png)
+
+
+## Correlation plot
+
+```{r}
+all.res=
+  rbind(
+    kelpie.res,
+    ling.res,
+    rock.res,
+    crab.res
+  )
+
+
+```
+
+
+```{r}
+svg(filename="allchi.svg")
+corrplot(all.res,is.cor=F,col.lim=c(-10,10),tl.col="black",addCoef.col = "black",cl.pos=F)
+
+for (i in c(0,2,4,6)){
+  lines(c(.5,2.5,2.5,.5,.5),c(.5+i,.5+i,2.5+i,2.5+i,.5+i),lwd=3)  
+}
+text.x=2.7
+text.x2=3
+text.cex=1
+text(text.x,7.5,"kelp greenling",srt=90,cex=text.cex)
+text(text.x,5.5,"lingcod",srt=90,cex=text.cex)
+text(text.x,3.5,"rockfish",srt=90,cex=text.cex)
+text(text.x,1.5,"red rock crab",srt=90,cex=text.cex)
+dev.off()
+```
+
+```{bash}
+cairosvg allchi.svg -o allchi.png -d 300
+```
+
+
