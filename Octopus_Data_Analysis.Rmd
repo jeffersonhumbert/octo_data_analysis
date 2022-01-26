@@ -1438,7 +1438,10 @@ cairosvg Redrockcrab_visitation_duration.svg -o Redrockcrab_visitation_duration.
 ![Crab visit durations when octopuses are absent or present.](Redrockcrab_visitation_duration.png)
 
 
-##
+###octopus daily assorted behaviors graph
+## contingency table to examine mosaic and association plots using vcd library
+##Pearson residuals (a measure of the departure of the Observed Frequencies from the Expected Frequencies)
+
 ```{r}
 require(vcd)
 contingency.tab = as.table(rbind(
