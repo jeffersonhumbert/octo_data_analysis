@@ -16,11 +16,8 @@ library(maptools)
 library(circular)
 library(plotrix)
 library(perm)
-<<<<<<< HEAD
 library(vcd)
-=======
 library(corrplot)
->>>>>>> 146411a5c9d876dc1691fbfac60b46e4ef7f09f2
 ```
 
 # Grabbing data and cleaning
@@ -1624,10 +1621,9 @@ cairosvg Redrockcrab_visitation_duration.svg -o Redrockcrab_visitation_duration.
 ![Crab visit durations when octopuses are absent or present.](Redrockcrab_visitation_duration.png)
 
 
-<<<<<<< HEAD
-###octopus daily assorted behaviors graph
+### octopus daily assorted behaviors graph
 ## contingency table to examine mosaic and association plots using vcd library
-##Pearson residuals (a measure of the departure of the Observed Frequencies from the Expected Frequencies)
+## Pearson residuals (a measure of the departure of the Observed Frequencies from the Expected Frequencies)
 
 ```{r}
 require(vcd)
@@ -1752,7 +1748,6 @@ octo_visit_duration_cowplot
 
 
    
-=======
 ## Correlation plot
 
 ```{r}
@@ -1790,4 +1785,3 @@ cairosvg allchi.svg -o allchi.png -d 300
 ```
 
 
->>>>>>> 146411a5c9d876dc1691fbfac60b46e4ef7f09f2
