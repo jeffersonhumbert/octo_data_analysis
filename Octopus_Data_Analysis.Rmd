@@ -371,53 +371,13 @@ for (i in 1:nrow(nonres.visit)){
 
 
 
-# Random Subsetting
-
-```{r}
-events$realtime[events$Species=="octopus_rubescens"&
-                    events$Event_type=="non-resident non-interaction"&
-                    events$Behavior=="frame_arrival"]
-```
-
-
-##
-
-```{r}
-events[events$Event_type=="non-resident non-interaction"&events$Species=="octopus_rubescens"&events$Behavior=="frame_arrival",]
-```
-
-
-```{r}
-events[events$Event_type=="non-resident non-interaction"&events$Species=="octopus_rubescens"&events$Behavior=="frame_departure",]
-```
-
-
-
-```{r}
-events[events$Event_type=="nonresident/resident interaction"&events$Species=="octopus_rubescens"|
-        events$Event_type=="resident/resident interaction"&events$Species=="octopus_rubescens",]
-```
-
-
-```{r}
-table(events$Event_type)
-```
-
-
-
-```{r}
-table(events$`1st Analyst ID`)
-```
-
-
-
 
 ## Visualization
 # Plotting octopus arrival times
 
 #should we be plotting frame arrival because the start of each deployment begins with a frame_arrival, wouldnt it be more useful to plot frame departures??
 ```{r}
-octo.visits=events$realtime[events$Behavior=="frame_arrival"&events$Species=="octopus_rubescens"]
+octo.visits=events$realtime[events$Behavior=="frame_departure"&events$Species=="octopus_rubescens"]
 
 DayHist(octo.visits,date="07/10/2021")
 ```
@@ -886,10 +846,10 @@ bartlett.test(kelpie.visit$duration,kelpie.visit$octopus)
 ```
 
 Assumptions fail, so I am using a permutation two-sample test.
-```{r}
-permTS(kelpie.visit$duration[kelpie.visit$octopus=="absent"],kelpie.visit$duration[kelpie.visit$octopus=="present"],
+```{r kelpie permTS}
+kelpie.permTS=permTS(kelpie.visit$duration[kelpie.visit$octopus=="absent"],kelpie.visit$duration[kelpie.visit$octopus=="present"],
        alternative="two.sided",method="exact.mc",control=permControl(nmc=10000))
-
+kelpie.permTS
 ```
 Very significant!
 
@@ -898,8 +858,8 @@ Seeing what the mean difference is between kelp greenling visit duration when oc
 aggregate(duration~octopus,data=kelpie.visit,FUN="mean")
 ```
 Plotting the data.
-```{r}
-boxplot(duration~octopus,data=kelpie.visit,range=0, ylim=c(0,1))
+```{r kelpie raw boxplot}
+boxplot(duration~octopus,data=kelpie.visit,range=0)
 ```
 
 This boxplot looks horrible so I am manually making boxplot with a broken Y-axis so the long tails don't obscure the main portion of the data.
@@ -1116,19 +1076,19 @@ bartlett.test(ling.visit$duration,ling.visit$octopus)
 ```
 
 Assumptions fail, so I am using a permutation two-sample test.
-```{r}
-permTS(ling.visit$duration[ling.visit$octopus=="absent"],ling.visit$duration[ling.visit$octopus=="present"],
+```{r lingcod permTS}
+ling.permTS=permTS(ling.visit$duration[ling.visit$octopus=="absent"],ling.visit$duration[ling.visit$octopus=="present"],
        alternative="two.sided",method="exact.mc",control=permControl(nmc=10000))
-
+ling.permTS
 ```
 Not significant
 
 Seeing what the mean difference is between lingcod visit duration when octopuses are absent versus octopuses are present.
 ```{r}
-aggregate(duration~octopus,data=ling.visit,FUN="mean")
+aggregate(duration~octopus,data=ling.visit,FUN="max")
 ```
 Plotting the data.
-```{r}
+```{r lingcod raw boxplot}
 boxplot(duration~octopus,data=ling.visit,range=0)
 ```
 
@@ -1345,20 +1305,20 @@ bartlett.test(rock.visit$duration,rock.visit$octopus)
 ```
 
 Assumptions fail, so I am using a permutation two-sample test.
-```{r}
+```{r rockfish permTS}
 permTS(rock.visit$duration[rock.visit$octopus=="absent"],rock.visit$duration[rock.visit$octopus=="present"],
        alternative="two.sided",method="exact.mc",control=permControl(nmc=10000))
 
 ```
-Very significant!
+Not Significant
 
-Seeing what the mean difference is between lingcod visit duration when octopuses are absent versus octopuses are present.
+Seeing what the mean difference is between Rockfish visit duration when octopuses are absent versus octopuses are present.
 ```{r}
 aggregate(duration~octopus,data=rock.visit,FUN="mean")
 ```
 Plotting the data.
-```{r}
-boxplot(duration~octopus,data=rock.visit,range=0,ylim=c(0,0.5))
+```{r rockfish raw boxplot}
+boxplot(duration~octopus,data=rock.visit,range=0)
 ```
 
 This boxplot looks horrible so I am manually making boxplot with a broken Y-axis so the long tails don't obscure the main portion of the data.
@@ -1575,7 +1535,7 @@ bartlett.test(crab.visit$duration,crab.visit$octopus)
 ```
 
 Assumptions fail, so I am using a permutation two-sample test.
-```{r}
+```{r crab permTS}
 permTS(crab.visit$duration[crab.visit$octopus=="absent"],crab.visit$duration[crab.visit$octopus=="present"],
        alternative="two.sided",method="exact.mc",control=permControl(nmc=10000))
 
@@ -1587,7 +1547,7 @@ Seeing what the mean difference is between lingcod visit duration when octopuses
 aggregate(duration~octopus,data=crab.visit,FUN="mean")
 ```
 Plotting the data.
-```{r}
+```{r crab raw boxplot}
 boxplot(duration~octopus,data=crab.visit,range=0)
 ```
 
@@ -1649,7 +1609,7 @@ assoc(contingency.tab, shade=T, legend=T)
 
 ### Boxplot for duration of non-resident octopus visits with and without a resident octopus previously living under the camera
 ## imported a excel file with visitation durations for each non-resident octopus visitation
-```{r}
+```{r, eval=F}
 
 library(ggplot2)
 library(ggsignif)
@@ -1721,7 +1681,7 @@ ggdraw(p2)
 
 
 
-```{r}
+```{r, eval=F}
 library(ggpubr)
 library(cowplot) 
 # Main plot built off octo_visit_duration_cowplot imported from excel file after i rearranged the data
@@ -1764,19 +1724,112 @@ all.res=
 
 
 ```{r}
-svg(filename="allchi.svg")
-corrplot(all.res,is.cor=F,col.lim=c(-10,10),tl.col="black",addCoef.col = "black",cl.pos=F)
+all.res=t(all.res)
+colnames(all.res)=rep("",8)
+sets=c("ling.visit","rock.visit","crab.visit")
+```
 
+
+```{r}
+svg(filename="allchi.svg",width=7,height=7)
+plot(c(0,1),c(0,1),type="n",axes=F,ylab="",xlab="")
+
+
+par(fig=c(0.05,0.95,0,0.5),new=T)
+
+corrplot(all.res,is.cor=F,col.lim=c(-10,10),tl.col="black",addCoef.col = "black",cl.pos=F,axes=F)
 for (i in c(0,2,4,6)){
-  lines(c(.5,2.5,2.5,.5,.5),c(.5+i,.5+i,2.5+i,2.5+i,.5+i),lwd=3)  
+  lines(c(.5+i,.5+i,2.5+i,2.5+i,.5+i),c(.5,2.5,2.5,.5,.5),lwd=3)  
+}
+
+for (i in 0:3){
+  text(2*i+1.15,0.4,"absent",srt=90,pos=2)
+  text(2*i+2.15,0.4,"present",srt=90,pos=2)
 }
 text.x=2.7
 text.x2=3
 text.cex=1
-text(text.x,7.5,"kelp greenling",srt=90,cex=text.cex)
-text(text.x,5.5,"lingcod",srt=90,cex=text.cex)
-text(text.x,3.5,"rockfish",srt=90,cex=text.cex)
-text(text.x,1.5,"red rock crab",srt=90,cex=text.cex)
+#text(text.x,7.5,"kelp greenling",srt=90,cex=text.cex)
+#text(text.x,5.5,"lingcod",srt=90,cex=text.cex)
+#text(text.x,3.5,"rockfish",srt=90,cex=text.cex)
+#text(text.x,1.5,"red rock crab",srt=90,cex=text.cex)
+
+start=0.001
+box.width=0.395-0.014
+box.next=0.219-0.014
+bottom.max=0.7
+top.min=0.7
+top.max=100
+top.at=c(1)
+top.log="y"
+
+par(fig=c(start,start+box.width,0.22,.8),new=T)
+boxplot(duration~octopus,data=kelpie.visit,range=0,ylim=c(0,bottom.max),axes=F,ylab="",xlab="")
+axis(2,at=c(0,0.3,0.6),las=1)
+box(lwd=3)
+text(1,mean(kelpie.visit$duration[kelpie.visit$octopus=="absent"]),"+",cex=2)
+text(2,mean(kelpie.visit$duration[kelpie.visit$octopus=="present"]),"+",cex=2)
+
+par(fig=c(start,start+box.width,0.536,1),new=T)
+boxplot(duration~octopus,data=kelpie.visit,range=0,ylim=c(top.min,top.max),axes=F,ylab="",xlab="",log=top.log)
+axis(2,at=c(1,10,100),labels=c("1","10","100"),las=1)
+box(lwd=3)
+lines(c(1,2),c(exp(log(max(kelpie.visit$duration))+0.5),exp(log(max(kelpie.visit$duration))+0.5)),lwd=2)
+text(1.5,exp(log(max(kelpie.visit$duration))+1),paste("p=",format(signif(kelpie.permTS$p.value,1),scientific = F),sep=""))
+
+
+par(fig=c(start+box.next*1,start+box.next*1+box.width,0.22,.8),new=T)
+boxplot(duration~octopus,data=ling.visit,range=0,ylim=c(0,bottom.max),axes=F,ylab="",xlab="")
+box(lwd=3)
+text(1,mean(ling.visit$duration[ling.visit$octopus=="absent"]),"+",cex=2)
+text(2,mean(ling.visit$duration[ling.visit$octopus=="present"]),"+",cex=2)
+
+par(fig=c(start+box.next*1,start+box.next*1+box.width,0.536,1),new=T)
+boxplot(duration~octopus,data=ling.visit,range=0,ylim=c(top.min,top.max),axes=F,ylab="",xlab="",log=top.log)
+box(lwd=3)
+lines(c(1,2),c(exp(log(max(ling.visit$duration))+0.5),exp(log(max(ling.visit$duration))+0.5)),lwd=2)
+text(1.5,exp(log(max(ling.visit$duration))+1),paste("p=",signif(ling.permTS$p.value,1),sep=""))
+
+
+par(fig=c(start+box.next*2,start+box.next*2+box.width,0.22,.8),new=T)
+boxplot(duration~octopus,data=rock.visit,range=0,ylim=c(0,bottom.max),axes=F,ylab="",xlab="")
+box(lwd=3)
+text(1,mean(rock.visit$duration[rock.visit$octopus=="absent"]),"+",cex=2)
+text(2,mean(rock.visit$duration[rock.visit$octopus=="present"]),"+",cex=2)
+
+par(fig=c(start+box.next*2,start+box.next*2+box.width,0.536,1),new=T)
+boxplot(duration~octopus,data=rock.visit,range=0,ylim=c(top.min,top.max),axes=F,ylab="",xlab="",log=top.log)
+box(lwd=3)
+
+
+par(fig=c(start+box.next*3,start+box.next*3+box.width,0.22,.8),new=T)
+boxplot(duration~octopus,data=crab.visit,range=0,ylim=c(0,bottom.max),axes=F,ylab="",xlab="")
+box(lwd=3)
+
+par(fig=c(start+box.next*3,start+box.next*3+box.width,0.536,1),new=T)
+boxplot(duration~octopus,data=crab.visit,range=0,ylim=c(top.min,top.max),axes=F,ylab="",xlab="",log=top.log)
+box(lwd=3)
+text(1,mean(crab.visit$duration[crab.visit$octopus=="absent"]),"+",cex=2)
+text(2,mean(crab.visit$duration[crab.visit$octopus=="present"]),"+",cex=2)
+
+species.line1=1
+species.line2=2
+n.line=0
+
+par(fig=c(0,1,0,1),new=T)
+plot(c(0,1),c(0,1),type="n",axes=F,ylab="",xlab="")
+mtext("Visit duration (min)",side=2,line=2.5,cex=1.5,adj=0.7)
+mtext(paste("n=",nrow(kelpie.visit),sep=""),side=3,line=n.line,cex=1,adj=0.09)
+mtext("decagrammus",side=3,line=species.line1,cex=1,adj=0.05,font=3)
+mtext("Hexagrammos",side=3,line=species.line2,cex=1,adj=0.05,font=3)
+mtext(paste("n=",nrow(ling.visit),sep=""),side=3,line=n.line,cex=1,adj=0.37)
+mtext("elongatus",side=3,line=species.line1,cex=1,adj=0.36,font=3)
+mtext("Ophiodon",side=3,line=species.line2,cex=1,adj=0.36,font=3)
+mtext(paste("n=",nrow(rock.visit),sep=""),side=3,line=n.line,cex=1,adj=0.63)
+mtext("Sebastes sp.",side=3,line=species.line1,cex=1,adj=0.63,font=3)
+mtext(paste("n=",nrow(crab.visit),sep=""),side=3,line=n.line,cex=1,adj=0.9)
+mtext("Cancer productus",side=3,line=species.line1,cex=1,adj=0.97,font=3)
+mtext("octopus present or absent",side=1,line=3.5,cex=1.5)
 dev.off()
 ```
 
