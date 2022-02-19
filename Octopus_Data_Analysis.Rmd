@@ -29,7 +29,8 @@ gs4_auth(token = drive_token())
 
 Pulling data from google sheets.
 ```{r}
-sheetID="1D53PFAokXS4kHfwSc9riEdKFo8T46GfQxjyo5PEWJg4"
+sheetID="1D53PFAokXS4kHfwSc9riEdKFo8T46GfQxjyo5PEWJg4" #current version
+#sheetID="1AT9gaTFz4HwAUMSz0n-klLNREBGdgRFvZdX3tkVj_nM" #01-18-22 version
 events=read_sheet(sheetID,"event_log",col_types="icccccccccccc")
 #changed the google sheet to be an adapted file without additional octopus frame arrivals within the same day
 
@@ -810,6 +811,7 @@ Getting distribution of observations for chi-squared test
 ```{r}
 kelpie.tab=
   as.vector(table(kelpie.visit$octopus,kelpie.visit$daynight))
+kelpie.tab
 ```
 
 
@@ -820,11 +822,13 @@ kelpie.probs=
     c(min.absent/(min.absent+min.present),min.present/(min.absent+min.present))*mean(kelpie.visit$day_expected),
     c(min.absent/(min.absent+min.present),min.present/(min.absent+min.present))*(1-mean(kelpie.visit$day_expected))
   )
+kelpie.probs
 ```
 
 Running chi-squared test
-```{r}
+```{r kelpie chi}
 kelpie.chi=chisq.test(kelpie.tab,p=kelpie.probs)
+kelpie.chi
 ```
 
 Plotting chi-squared residuals
@@ -1054,7 +1058,7 @@ ling.probs=
 ```
 
 Running chi-squared test
-```{r}
+```{r ling chi}
 ling.chi=chisq.test(ling.tab,p=ling.probs)
 ling.chi
 ```
@@ -1283,7 +1287,7 @@ rock.probs=
 ```
 
 Running chi-squared test
-```{r}
+```{r rock chi}
 rock.chi=chisq.test(rock.tab,p=rock.probs)
 rock.chi
 ```
@@ -1306,9 +1310,9 @@ bartlett.test(rock.visit$duration,rock.visit$octopus)
 
 Assumptions fail, so I am using a permutation two-sample test.
 ```{r rockfish permTS}
-permTS(rock.visit$duration[rock.visit$octopus=="absent"],rock.visit$duration[rock.visit$octopus=="present"],
+rock.permTS=permTS(rock.visit$duration[rock.visit$octopus=="absent"],rock.visit$duration[rock.visit$octopus=="present"],
        alternative="two.sided",method="exact.mc",control=permControl(nmc=10000))
-
+rock.permTS
 ```
 Not Significant
 
@@ -1513,7 +1517,7 @@ crab.probs=
 ```
 
 Running chi-squared test
-```{r}
+```{r crab chi}
 crab.chi=chisq.test(crab.tab,p=crab.probs)
 crab.chi
 ```
@@ -1774,8 +1778,11 @@ par(fig=c(start,start+box.width,0.536,1),new=T)
 boxplot(duration~octopus,data=kelpie.visit,range=0,ylim=c(top.min,top.max),axes=F,ylab="",xlab="",log=top.log)
 axis(2,at=c(1,10,100),labels=c("1","10","100"),las=1)
 box(lwd=3)
-lines(c(1,2),c(exp(log(max(kelpie.visit$duration))+0.5),exp(log(max(kelpie.visit$duration))+0.5)),lwd=2)
-text(1.5,exp(log(max(kelpie.visit$duration))+1),paste("p=",format(signif(kelpie.permTS$p.value,1),scientific = F),sep=""))
+if (kelpie.permTS$p.value<=0.05){
+  lines(c(1,2),c(exp(log(max(kelpie.visit$duration))+0.5),exp(log(max(kelpie.visit$duration))+0.5)),lwd=2)
+  text(1.5,exp(log(max(kelpie.visit$duration))+1),paste("p=",format(signif(kelpie.permTS$p.value,1),scientific = F),sep=""))
+
+}
 
 
 par(fig=c(start+box.next*1,start+box.next*1+box.width,0.22,.8),new=T)
@@ -1787,8 +1794,10 @@ text(2,mean(ling.visit$duration[ling.visit$octopus=="present"]),"+",cex=2)
 par(fig=c(start+box.next*1,start+box.next*1+box.width,0.536,1),new=T)
 boxplot(duration~octopus,data=ling.visit,range=0,ylim=c(top.min,top.max),axes=F,ylab="",xlab="",log=top.log)
 box(lwd=3)
-lines(c(1,2),c(exp(log(max(ling.visit$duration))+0.5),exp(log(max(ling.visit$duration))+0.5)),lwd=2)
-text(1.5,exp(log(max(ling.visit$duration))+1),paste("p=",signif(ling.permTS$p.value,1),sep=""))
+if (ling.permTS$p.value<=0.05){
+  lines(c(1,2),c(exp(log(max(ling.visit$duration))+0.5),exp(log(max(ling.visit$duration))+0.5)),lwd=2)
+  text(1.5,exp(log(max(ling.visit$duration))+1),paste("p=",format(signif(ling.permTS$p.value,1),scientific=F),sep=""))
+}
 
 
 par(fig=c(start+box.next*2,start+box.next*2+box.width,0.22,.8),new=T)
@@ -1800,6 +1809,10 @@ text(2,mean(rock.visit$duration[rock.visit$octopus=="present"]),"+",cex=2)
 par(fig=c(start+box.next*2,start+box.next*2+box.width,0.536,1),new=T)
 boxplot(duration~octopus,data=rock.visit,range=0,ylim=c(top.min,top.max),axes=F,ylab="",xlab="",log=top.log)
 box(lwd=3)
+if (rock.permTS$p.value<=0.05){
+  lines(c(1,2),c(exp(log(max(rock.visit$duration))+0.5),exp(log(max(rock.visit$duration))+0.5)),lwd=2)
+  text(1.5,exp(log(max(rock.visit$duration))+1),paste("p=",format(signif(rock.permTS$p.value,1),scientific=F),sep=""))
+}
 
 
 par(fig=c(start+box.next*3,start+box.next*3+box.width,0.22,.8),new=T)
