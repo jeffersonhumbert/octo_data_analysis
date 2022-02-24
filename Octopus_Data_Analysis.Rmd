@@ -18,6 +18,7 @@ library(plotrix)
 library(perm)
 library(vcd)
 library(corrplot)
+library(png)
 ```
 
 # Grabbing data and cleaning
@@ -547,7 +548,7 @@ octo.chi
 
 ```
 
-#crabs day vs night
+# crabs day vs night
 ```{r}
 
 to.plot=events$realtime[events$Behavior=="frame_arrival"&crabs]
@@ -564,6 +565,52 @@ crab.chi=chisq.test(crab.daynight,p=crab.probs)
 crab.chi
 
 ```
+
+
+# Time histogram figure
+
+```{r}
+table(events$Behavior[events$Species=="octopus_rubescens"])
+```
+
+
+```{r time hist}
+moon=readPNG("moon.png")
+sun=readPNG("sun.png")
+svg(filename="timing.svg")
+par(fig=c(0,0.5,0.5,1))
+DayHist(events$realtime[events$Species=="octopus_rubescens"&events$Behavior=="fortify"],date="07/10/2021",hist.zoom=4,
+        night.col="lightskyblue3")
+rasterImage(moon,-0.15,0.6,0.15,0.9)
+rasterImage(sun,-0.15,-0.6,0.15,-0.9)
+mtext("fortify",side=3,line=1.5,cex=1.5)
+mtext(paste("n=",length(events$realtime[events$Species=="octopus_rubescens"&events$Behavior=="fortify"]),sep=""),
+      side=3,line=0.6,cex=1)
+
+par(fig=c(0.5,1,0.5,1),new=T)
+DayHist(events$realtime[events$Species=="octopus_rubescens"&events$Behavior=="frame_departure"],date="07/10/2021",hist.zoom=8,
+        night.col="lightskyblue3")
+rasterImage(moon,-0.15,0.6,0.15,0.9)
+rasterImage(sun,-0.15,-0.6,0.15,-0.9)
+mtext("departures",side=3,line=1,cex=1.5)
+
+
+par(fig=c(0,0.5,0,0.5),new=T)
+DayHist(events$realtime[events$Species=="octopus_rubescens"&events$Behavior=="periscope"],date="07/10/2021",hist.zoom=4.5,
+        night.col="lightskyblue3")
+rasterImage(moon,-0.15,0.6,0.15,0.9)
+rasterImage(sun,-0.15,-0.6,0.15,-0.9)
+mtext("periscope",side=3,line=1,cex=1.5)
+
+par(fig=c(0.5,1,0,0.5),new=T)
+DayHist(events$realtime[events$Species=="octopus_rubescens"&events$Behavior=="enter_bottle"|events$Species=="octopus_rubescens"&events$Behavior=="exit_bottle"],date="07/10/2021",hist.zoom=4.5,
+        night.col="lightskyblue3")
+rasterImage(moon,-0.15,0.6,0.15,0.9)
+rasterImage(sun,-0.15,-0.6,0.15,-0.9)
+mtext("enter/exit bottle",side=3,line=1,cex=1.5)
+dev.off()
+```
+
 
 
 # Interspecific Interaction Analysis
@@ -1849,5 +1896,4 @@ dev.off()
 ```{bash}
 cairosvg allchi.svg -o allchi.png -d 300
 ```
-
 
