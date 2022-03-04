@@ -5,7 +5,7 @@ date: "11/4/2021"
 output: html_document
 ---
 
-```{r}
+```{Installing Libraries}
 library(remotes)
 #install_github("KirtOnthank/CircularTimeHistogram")
 library(CircularTimeHistogram)
@@ -21,14 +21,14 @@ library(corrplot)
 library(png)
 ```
 
-# Grabbing data and cleaning
+### Grabbing data and cleaning it up
 Getting google sheets authorization (run at least once before knitting)
 ```{r eval=FALSE}
 drive_auth()
 gs4_auth(token = drive_token())
 ```
 
-Pulling data from google sheets.
+ Pulling data from google sheets.
 ```{r}
 sheetID="1D53PFAokXS4kHfwSc9riEdKFo8T46GfQxjyo5PEWJg4" #current version
 #sheetID="1AT9gaTFz4HwAUMSz0n-klLNREBGdgRFvZdX3tkVj_nM" #01-18-22 version
@@ -37,7 +37,7 @@ events=read_sheet(sheetID,"event_log",col_types="icccccccccccc")
 
 ```
 
-Cleaning out unfilled rows.
+ Cleaning out unfilled rows.
 ```{r}
 events=events[complete.cases(events$Date),]
 events=events[complete.cases(events$Behavior),]
@@ -522,19 +522,19 @@ t.test(duration~daynight,data=nonres.visit,var.equal=T)
 
 ## octopus visitations: day vs night
 ```{r}
-octo.daynight=as.numeric(table(events$daynight[events$Behavior=="frame_departure"&events$Species=="octopus_rubescens"]))
+depart.daynight=as.numeric(table(events$daynight[events$Behavior=="frame_departure"&events$Species=="octopus_rubescens"]))
 
-octo.probs=c(
+depart.probs=c(
 mean(events$day_expected[events$Behavior=="frame_departure"&events$Species=="octopus_rubescens"]),
 1-mean(events$day_expected[events$Behavior=="frame_departure"&events$Species=="octopus_rubescens"])
 )
 
-octo.chi=chisq.test(octo.daynight,p=octo.probs)
-octo.chi
+depart.chi=chisq.test(depart.daynight,p=depart.probs)
+depart.chi
 ```
 
 
-# octopus den fortification: day vs. night
+## octopus den fortification: day vs. night
 ```{r fortification chi}
 fort.daynight=as.numeric(table(events$daynight[events$Behavior=="fortify"&events$Species=="octopus_rubescens"]))
 
@@ -546,6 +546,32 @@ mean(events$day_expected[events$Behavior=="fortify"&events$Species=="octopus_rub
 fort.chi=chisq.test(fort.daynight,p=fort.probs)
 fort.chi
 
+```
+
+## octopus periscope: day vs night
+```{r}
+periscope.daynight=as.numeric(table(events$daynight[events$Behavior=="periscope"&events$Species=="octopus_rubescens"]))
+
+peri.probs=c(
+mean(events$day_expected[events$Behavior=="periscope"&events$Species=="octopus_rubescens"]),
+1-mean(events$day_expected[events$Behavior=="periscope"&events$Species=="octopus_rubescens"])
+)
+
+peri.chi=chisq.test(periscope.daynight,p=peri.probs)
+peri.chi
+```
+
+## octopus bottle enter and exit: day vs night
+```{r}
+enterexit.daynight=as.numeric(table(events$daynight[events$Behavior=="enter_bottle"&events$Species=="octopus_rubescens"|events$Behavior=="exit_bottle"&events$Species=="octopus_rubescens"]))
+
+enterexit.probs=c(
+mean(events$day_expected[events$Behavior=="enter_bottle"&events$Species=="octopus_rubescens"|events$Behavior=="exit_bottle"&events$Species=="octopus_rubescens"]),
+1-mean(events$day_expected[events$Behavior=="enter_bottle"&events$Species=="octopus_rubescens"|events$Behavior=="exit_bottle"&events$Species=="octopus_rubescens"])
+)
+
+enterexit.chi=chisq.test(enterexit.daynight,p=enterexit.probs)
+enterexit.chi
 ```
 
 # crabs day vs night
@@ -583,7 +609,8 @@ DayHist(events$realtime[events$Species=="octopus_rubescens"&events$Behavior=="fo
         night.col="lightskyblue3")
 rasterImage(moon,-0.15,0.6,0.15,0.9)
 rasterImage(sun,-0.15,-0.6,0.15,-0.9)
-mtext("fortify",side=3,line=1.5,cex=1.5)
+mtext("Fortification",side=3,line=1.5,cex=1.5)
+
 if(fort.chi$p.value>0.0001){
   mtext(paste("n=",nrow(events[events$Species=="octopus_rubescens"&events$Behavior=="fortify",]),
               " p=",format(signif(fort.chi$p.value,1),scientific = F),sep=""),
@@ -599,23 +626,54 @@ DayHist(events$realtime[events$Species=="octopus_rubescens"&events$Behavior=="fr
         night.col="lightskyblue3")
 rasterImage(moon,-0.15,0.6,0.15,0.9)
 rasterImage(sun,-0.15,-0.6,0.15,-0.9)
-mtext("departures",side=3,line=1,cex=1.5)
+mtext("Frame departures",side=3,line=1.5,cex=1.5)
 
+if(fort.chi$p.value>0.0001){
+  mtext(paste("n=",nrow(events[events$Species=="octopus_rubescens"&events$Behavior=="frame_departure",]),
+              " p=",format(signif(depart.chi$p.value,1),scientific = F),sep=""),
+      side=3,line=0.6,cex=1)
+} else{
+  mtext(paste("n=",nrow(events[events$Species=="octopus_rubescens"&events$Behavior=="frame_departure",]),
+              " p<0.0001",sep=""),
+      side=3,line=0.6,cex=1)
+}
 
 par(fig=c(0,0.5,0,0.5),new=T)
 DayHist(events$realtime[events$Species=="octopus_rubescens"&events$Behavior=="periscope"],date="07/10/2021",hist.zoom=4.5,
         night.col="lightskyblue3")
 rasterImage(moon,-0.15,0.6,0.15,0.9)
 rasterImage(sun,-0.15,-0.6,0.15,-0.9)
-mtext("periscope",side=3,line=1,cex=1.5)
+mtext("Periscoping",side=3,line=1.5,cex=1.5)
+
+if(fort.chi$p.value>0.0001){
+  mtext(paste("n=",nrow(events[events$Species=="octopus_rubescens"&events$Behavior=="periscope",]),
+              " p=",format(signif(peri.chi$p.value,1),scientific = F),sep=""),
+      side=3,line=0.6,cex=1)
+} else{
+  mtext(paste("n=",nrow(events[events$Species=="octopus_rubescens"&events$Behavior=="periscope",]),
+              " p<0.0001",sep=""),
+      side=3,line=0.6,cex=1)
+}
+
 
 par(fig=c(0.5,1,0,0.5),new=T)
 DayHist(events$realtime[events$Species=="octopus_rubescens"&events$Behavior=="enter_bottle"|events$Species=="octopus_rubescens"&events$Behavior=="exit_bottle"],date="07/10/2021",hist.zoom=4.5,
         night.col="lightskyblue3")
 rasterImage(moon,-0.15,0.6,0.15,0.9)
 rasterImage(sun,-0.15,-0.6,0.15,-0.9)
-mtext("enter/exit bottle",side=3,line=1,cex=1.5)
+mtext("Enter/exit bottle",side=3,line=1.5,cex=1.5)
+if(fort.chi$p.value>0.0001){
+  mtext(paste("n=",nrow(events[events$Species=="octopus_rubescens"&events$Behavior=="enter_bottle"|events$Species=="octopus_rubescens"&events$Behavior=="exit_bottle",]),
+              " p=",format(signif(enterexit.chi$p.value,1),scientific = F),sep=""),
+      side=3,line=0.6,cex=1)
+} else{
+  mtext(paste("n=",nrow(events[events$Species=="octopus_rubescens"&events$Behavior=="enter_bottle"|events$Species=="octopus_rubescens"&events$Behavior=="exit_bottle",]),
+              " p<0.0001",sep=""),
+      side=3,line=0.6,cex=1)
+}
+
 dev.off()
+
 ```
 
 
@@ -1583,6 +1641,7 @@ colnames(crab.res)=c("day","night")
 rownames(crab.res)=c("octopus absent","octopus present")
 
 corrplot(crab.res,is.cor=F,col.lim=c(-10,10))
+crab.res
 ```
 
 Testing my assumptions for T-Test
@@ -1638,6 +1697,228 @@ cairosvg Redrockcrab_visitation_duration.svg -o Redrockcrab_visitation_duration.
 
 ![Crab visit durations when octopuses are absent or present.](Redrockcrab_visitation_duration.png)
 
+
+## Lingcod Analysis
+### Lingcod visitation frequency with octopuses absent vs. present.
+In this chunk I am tallying Lingcod arrivals when octopuses are present versus absent.
+```{r}
+lings=numeric()
+
+for (i in 1:nrow(octos.present)){
+  lings[i]=sum(events$Species=="lingcod"&
+    events$Behavior=="frame_arrival"&
+    events$`Deployment #`==octos.present$`Deployment #`[i]&
+    events$realtime>octos.present$realtime[i]&
+    events$realtime<octos.present$endtime[i])
+}
+
+lings.absent=sum(lings[octos.present$number==0])
+lings.present=sum(lings[octos.present$number>0])
+lings.absent
+lings.present
+```
+
+Next I perform a chi square test to see if the lingcod visitation frequency is significantly different that random. Here, I am using the probability in each category (absent vs. present) as the proportion of time octopuses were absent versus present.
+```{r}
+probs=c(min.absent/(min.absent+min.present),min.present/(min.absent+min.present))
+
+chisq.test(c(lings.absent,lings.present),p=probs)
+```
+
+
+
+### non-resident octopus visit duration when octopuses are absent versus present.
+First, I make dataframes to hold my visit duration information and catalog potential bad arrivals and departure entries.
+
+```{r}
+octo.visit=data.frame(deployment=as.numeric(NA),
+           time=as.POSIXct(NA),
+           duration=as.numeric(NA))
+
+octo.badarrival=data.frame(deployment=as.numeric(NA),
+           time1=as.POSIXct(NA),
+           time2=as.POSIXct(NA),
+           duration=as.numeric(NA))
+
+octo.baddepar=data.frame(deployment=as.numeric(NA),
+           time1=as.POSIXct(NA),
+           time2=as.POSIXct(NA),
+           duration=as.numeric(NA))
+
+```
+
+Next, I calculate the duration of each octopus visit.
+
+```{r}
+
+
+for (i in 1:length(deployments)){
+  arrivals=events$realtime[events$Species=="octopus_rubescens"&
+                    events$Behavior=="frame_arrival"&
+                    events$`Deployment #`==deployments[i]]
+
+  departures=events$realtime[events$Species=="octopus_rubescens"&
+                    events$Behavior=="frame_departure"&
+                    events$`Deployment #`==deployments[i]]
+
+  if (length(arrivals)>0){
+  depar.tags=c(rep("arrive",length(arrivals)),rep("depart",length(departures)))
+
+  deploy.sub=data.frame(time=c(arrivals,departures),type=depar.tags)
+  deploy.sub=deploy.sub[order(deploy.sub$time),]
+
+
+
+      #Finding which arrivals are immediately followed by a departure
+      visit.depar=which(deploy.sub$type[1:(nrow(deploy.sub)-1)]=="arrive"&
+                          deploy.sub$type[2:nrow(deploy.sub)]=="depart")
+      # Now calculating the 
+      visit.dura=difftime(deploy.sub$time[visit.depar+1],deploy.sub$time[visit.depar],units = "min")
+      visit.stub=data.frame(deployment=rep(deployments[i],length(visit.dura)),
+                 time=deploy.sub$time[visit.depar],
+                 duration=as.numeric(visit.dura))
+      octo.visit=rbind(octo.visit,visit.stub)
+
+            # Finding arrivals followed immediately by another arrival (This should not be possible, so this is error locating)
+      badarrival.depar=which(deploy.sub$type[1:(nrow(deploy.sub)-1)]=="arrive"&
+                               deploy.sub$type[2:nrow(deploy.sub)]=="arrive")
+      badarrival.dura=difftime(deploy.sub$time[badarrival.depar+1],deploy.sub$time[badarrival.depar],units = "min")
+      badarrival.stub=data.frame(deployment=rep(deployments[i],length(badarrival.dura)),
+                 time1=deploy.sub$time[badarrival.depar],
+                 time2=deploy.sub$time[badarrival.depar+1],
+                 duration=as.numeric(badarrival.dura))
+      octo.badarrival=rbind(octo.badarrival,badarrival.stub)
+      
+      baddepar.depar=which(deploy.sub$type[1:(nrow(deploy.sub)-1)]=="depart"&
+                             deploy.sub$type[2:nrow(deploy.sub)]=="depart")
+      baddepar.dura=difftime(deploy.sub$time[baddepar.depar+1],deploy.sub$time[baddepar.depar],units = "min")
+      baddepar.stub=data.frame(deployment=rep(deployments[i],length(baddepar.dura)),
+                 time1=deploy.sub$time[baddepar.depar],
+                 time2=deploy.sub$time[baddepar.depar+1],
+                 duration=as.numeric(baddepar.dura))
+      octo.baddepar=rbind(octo.baddepar,baddepar.stub)
+
+      
+    }
+}
+
+
+octo.visit=octo.visit[complete.cases(octo.visit),]
+octo.visit
+```
+
+
+Adding if octopuses are present or absent during each visit to my dataframe
+```{r}
+octo.visit$octopus="unknown"
+
+
+for (i in 1:nrow(octos.present)){
+  if (octos.present$number[i]>0){
+    octo.visit$octopus[octo.visit$deployment==octos.present$`Deployment #`[i]&
+                 octo.visit$time>octos.present$realtime[i]&
+                 octo.visit$time<octos.present$endtime[i]]="present"
+  }
+  if (octos.present$number[i]==0){
+    octo.visit$octopus[octo.visit$deployment==octos.present$`Deployment #`[i]&
+                 octo.visit$time>octos.present$realtime[i]&
+                 octo.visit$time<octos.present$endtime[i]]="absent"
+  }
+}
+
+octo.visit=octo.visit[!octo.visit$octopus=="unknown",]
+```
+
+Adding if each octo visit was during the day or the night
+```{r}
+octo.visit$daynight="night"
+octo.visit$day_expected=0
+
+for (i in 1:nrow(ling.visit)){
+  sunrise=sunriset(bay, as.POSIXct(octo.visit$time[i]), direction="sunrise", POSIXct.out=TRUE)$time
+  sunset=sunriset(bay,  as.POSIXct(octo.visit$time[i]), direction="sunset", POSIXct.out=TRUE)$time
+  if (octo.visit$time[i]>sunrise&octo.visit$time[i]<sunset) {
+    octo.visit$daynight[i]="day"
+  }
+  octo.visit$day_expected[i]=as.numeric(difftime(sunset,sunrise,units="hours"))/24
+}
+```
+
+Getting distribution of observations for chi-squared test
+```{r}
+octo.tab=
+  as.vector(table(octo.visit$octopus,octo.visit$daynight))
+```
+
+
+Setting up probabilities for chi-squared test
+```{r}
+octo.probs=
+  c(
+    c(min.absent/(min.absent+min.present),min.present/(min.absent+min.present))*mean(octo.visit$day_expected),
+    c(min.absent/(min.absent+min.present),min.present/(min.absent+min.present))*(1-mean(octo.visit$day_expected))
+  )
+```
+
+Running chi-squared test
+```{r ling chi}
+octo.chi=chisq.test(octo.tab,p=octo.probs)
+octo.chi
+```
+
+Plotting chi-squared residuals
+```{r}
+octo.res=matrix(octo.chi$residuals,ncol=2)
+colnames(octo.res)=c("day","night")
+rownames(octo.res)=c("octopus absent","octopus present")
+
+corrplot(octo.res,is.cor=F,col.lim=c(-10,10))
+```
+
+Testing my assumptions for T-Test
+```{r}
+shapiro.test(octo.visit$duration[octo.visit$octopus=="present"])
+shapiro.test(octo.visit$duration[octo.visit$octopus=="absent"])
+bartlett.test(octo.visit$duration,octo.visit$octopus)
+```
+
+Assumptions fail, so I am using a permutation two-sample test.
+```{r lingcod permTS}
+octo.permTS=permTS(octo.visit$duration[octo.visit$octopus=="absent"],octo.visit$duration[octo.visit$octopus=="present"],
+       alternative="two.sided",method="exact.mc",control=permControl(nmc=10000))
+octo.permTS
+```
+
+Seeing what the mean difference is between lingcod visit duration when octopuses are absent versus octopuses are present.
+```{r}
+aggregate(duration~octopus,data=octo.visit,FUN="max")
+```
+Plotting the data.
+```{r lingcod raw boxplot}
+boxplot(duration~octopus,data=octo.visit,range=0)
+```
+
+This boxplot looks horrible so I am manually making boxplot with a broken Y-axis so the long tails don't obscure the main portion of the data.
+
+```{r}
+svg("Nonresident_octo_visitation_duration.svg",width=3,height=3,pointsize = 6)
+par(fig=c(0,1,0.35,1))
+boxplot(duration~octopus,data=octo.visit,range=0,ylim=c(2,9),axes=F,ylab="",xlab="")
+axis(2,at=c(6,6.5))
+box()
+
+par(fig=c(0,1,0,0.65),new=T)
+boxplot(duration~octopus,data=octo.visit,range=0,ylim=c(0,0.15),axes=F,ylab="",xlab="")
+axis(2,at=c(0,0.15))
+axis(1,at=c(1,2),label=c("octopus absent","octopus present"),cex.axis=1.5)
+box()
+
+par(fig=c(0,1,0,1),new=T)
+plot(c(0,1),c(0,1),type="n",axes=F,ylab="",xlab="")
+mtext("Visit duration (min)",side=2,line=2.5,cex=1.5)
+
+dev.off()
+```
 
 ### octopus daily assorted behaviors graph
 ## contingency table to examine mosaic and association plots using vcd library
@@ -1766,7 +2047,7 @@ octo_visit_duration_cowplot
 
 
    
-## Correlation plot
+## Correlation plot for intraspecifics
 
 ```{r}
 all.res=
@@ -1904,3 +2185,87 @@ dev.off()
 cairosvg allchi.svg -o allchi.png -d 300
 ```
 
+
+## Correlation plot for Conspecifics
+
+```{r}
+all.res=
+  rbind(
+    octo.res
+  )
+
+
+```
+
+
+```{r}
+all.res=t(all.res)
+colnames(all.res)=rep("",2)
+sets=c("octo.visit")
+all.res
+```
+
+
+```{r Conspecific Interaction plot}
+svg(filename="conspecificchi.svg",width=7,height=7)
+plot(c(0,1),c(0,1),type="n",axes=F,ylab="",xlab="")
+
+
+par(fig=c(0.05,0.95,0,0.5),new=T)
+
+corrplot(all.res,is.cor=F,col.lim=c(-10,10),tl.col="black",addCoef.col = "black",cl.pos=F,axes=F)
+for (i in c(0,2,4,6)){
+  lines(c(.5+i,.5+i,2.5+i,2.5+i,.5+i),c(.5,2.5,2.5,.5,.5),lwd=3)  
+}
+
+for (i in 0:3){
+  text(2*i+1.15,0.4,"absent",srt=90,pos=2)
+  text(2*i+2.15,0.4,"present",srt=90,pos=2)
+}
+text.x=2.7
+text.x2=3
+text.cex=1
+#text(text.x,7.5,"kelp greenling",srt=90,cex=text.cex)
+#text(text.x,5.5,"lingcod",srt=90,cex=text.cex)
+#text(text.x,3.5,"rockfish",srt=90,cex=text.cex)
+#text(text.x,1.5,"red rock crab",srt=90,cex=text.cex)
+
+start=0.001
+box.width=0.395-0.014
+box.next=0.219-0.014
+bottom.max=0.7
+top.min=0.7
+top.max=100
+top.at=c(1)
+top.log="y"
+
+par(fig=c(start,start+box.width,0.22,.8),new=T)
+boxplot(duration~octopus,data=octo.visit,range=0,ylim=c(0,bottom.max),axes=F,ylab="",xlab="")
+axis(2,at=c(0,0.3,0.6),las=1)
+box(lwd=3)
+text(1,mean(octo.visit$duration[octo.visit$octopus=="absent"]),"+",cex=2)
+text(2,mean(octo.visit$duration[octo.visit$octopus=="present"]),"+",cex=2)
+
+par(fig=c(start,start+box.width,0.536,1),new=T)
+boxplot(duration~octopus,data=octo.visit,range=0,ylim=c(top.min,top.max),axes=F,ylab="",xlab="",log=top.log)
+axis(2,at=c(1,10,100),labels=c("1","10","100"),las=1)
+box(lwd=3)
+if (kelpie.permTS$p.value<=0.05){
+  lines(c(1,2),c(exp(log(max(octo.visit$duration))+0.5),exp(log(max(octo.visit$duration))+0.5)),lwd=2)
+  text(1.5,exp(log(max(octo.visit$duration))+1),paste("p=",format(signif(octo.permTS$p.value,1),scientific = F),sep=""))
+
+}
+
+species.line1=1
+species.line2=2
+n.line=0
+
+par(fig=c(0,1,0,1),new=T)
+plot(c(0,1),c(0,1),type="n",axes=F,ylab="",xlab="")
+mtext("Visit duration (min)",side=2,line=2.5,cex=1.5,adj=0.7)
+mtext(paste("n=",nrow(octo.visit),sep=""),side=3,line=n.line,cex=1,adj=0.09)
+mtext("Octopus rubescens",side=3,line=species.line1,cex=1,adj=0.05,font=3)
+mtext("Non-resident visiting",side=3,line=species.line2,cex=1,adj=0.05,font=3)
+mtext("Resident octopus present or absent",side=1,line=3.5,cex=1.5)
+dev.off()
+```
