@@ -1925,10 +1925,31 @@ octo.visit=octo.visit[!octo.visit$resident=="unknown",]
 
 
 ### Does each octopus touch or reach inside bottle
-```{r}
+```{r checking behaviors}
+table(events$Behavior[events$Species=="octopus_rubescens"])
+```
+
+```{r Reach data filling}
+octo.visit$reach="unknown"
+
+for (i in 1:nrow(octo.visit)){
+  start=octo.visit$time[i]
+  end=start+(octo.visit$duration[i]*60)
+  happenings=events$Behavior[events$realtime>=start&events$realtime<=end&events$`Deployment #`==octo.visit$deployment[i]]
+  if(sum(grepl("reach_inside_inhabited_bottle|reach_inside_uninhabited_bottle",happenings))>0){
+    octo.visit$reach[i]="reach"
+  } else {
+    octo.visit$reach[i]="no_reach"
+  }
+}
+
 
 ```
 
+
+```{r}
+table(octo.visit$resident,octo.visit$reach)
+```
 
 
 Adding if each octo visit was during the day or the night
@@ -1993,7 +2014,7 @@ octo.permTS
 
 Seeing what the mean difference is between non-resident visit duration when octopuses are absent versus octopuses are present.
 ```{r}
-aggregate(duration~resident,data=octo.visit,FUN="mean")
+aggregate(duration~resident,data=octo.visit,FUN="length")
 ```
 Plotting the data.
 ```{r octo raw boxplot}
