@@ -2375,3 +2375,41 @@ mtext("Non-resident visiting",side=3,line=species.line2,cex=1,adj=0.05,font=3)
 mtext("Resident octopus present or absent",side=1,line=3.5,cex=1.5)
 dev.off()
 ```
+
+
+# Are you more likely to encounter an octopus in the frame at a random time at night or during the day?
+
+first, make a list of every minute from every duration from the octos.present object, 
+```{r}
+times=seq(from=octos.present$realtime[1],to=octos.present$endtime[1],by="1 min")
+octos=rep(octos.present$number[1],length(times))
+
+for (i in 2:nrow(octos.present)){
+  times=c(times,seq(from=octos.present$realtime[i],to=octos.present$endtime[i],by="1 min"))
+  octos=c(octos,rep(octos.present$number[i],length(seq(from=octos.present$realtime[i],to=octos.present$endtime[i],by="1 min"))))
+}
+
+
+```
+
+
+next, for each of those times, I will determine if it is during day or night.
+```{r}
+daynight=rep("night",length(times))
+
+dates=unique(as.Date(times))
+
+for (i in 1:length(dates)){
+  sunrise=sunriset(bay, as.POSIXct(dates[i]), direction="sunrise", POSIXct.out=TRUE)$time
+  sunset=sunriset(bay,  as.POSIXct(dates[i]), direction="sunset", POSIXct.out=TRUE)$time
+  daynight[times>sunrise&times<sunset]="day"
+}
+
+```
+
+Sampling 606 night times and 606 day times to see if an octopus is present
+```{r}
+daynight.samp=c(sum(sample(octos[daynight=="night"]>0,606)),sum(sample(octos[daynight=="day"]>0,606)))
+chisq.test(daynight.samp)
+```
+The frequency of octopus encounters is not significantly different between day and night.
