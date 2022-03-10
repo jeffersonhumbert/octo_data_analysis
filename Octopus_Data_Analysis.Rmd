@@ -2158,18 +2158,9 @@ all.chi.p=
 
 ```
 
-
-
 ```{r}
 colnames(all.res)=rep("",ncol(all.res))
 rownames(all.res)=rep("",nrow(all.res))
-#all.res=t(all.res)
-#colnames(all.res)=rep("",2)
-#sets=c("ling.visit","rock.visit","crab.visit")
-```
-
-```{r}
-corrplot(all.res,is.cor=F,col.lim=c(-5,5),tl.col="black",addCoef.col = "black",cl.pos=F,axes=F,addgrid.col=NA)
 ```
 
 
