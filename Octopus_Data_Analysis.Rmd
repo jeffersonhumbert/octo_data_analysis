@@ -1009,7 +1009,7 @@ for (i in 1:nrow(kelpie.visit)){
 Getting distribution of observations for chi-squared test
 ```{r}
 kelpie.tab=
-  as.vector(table(kelpie.visit$octopus,kelpie.visit$daynight))
+  as.vector(table(kelpie.visit$octopus))
 kelpie.tab
 ```
 
@@ -1017,10 +1017,7 @@ kelpie.tab
 Setting up probabilities for chi-squared test
 ```{r}
 kelpie.probs=
-  c(
-    c(min.absent/(min.absent+min.present),min.present/(min.absent+min.present))*mean(kelpie.visit$day_expected),
-    c(min.absent/(min.absent+min.present),min.present/(min.absent+min.present))*(1-mean(kelpie.visit$day_expected))
-  )
+  c(min.absent/(min.absent+min.present),min.present/(min.absent+min.present))
 kelpie.probs
 ```
 
@@ -1033,10 +1030,9 @@ kelpie.chi
 Plotting chi-squared residuals
 ```{r}
 kelpie.res=matrix(kelpie.chi$residuals,ncol=2)
-colnames(kelpie.res)=c("day","night")
-rownames(kelpie.res)=c("octopus absent","octopus present")
+colnames(kelpie.res)=c("octopus absent","octopus present")
 
-corrplot(kelpie.res,is.cor=F,col.lim=c(-10,10))
+corrplot(kelpie.res,is.cor=F,col.lim=c(-5,5))
 ```
 
 
@@ -1243,17 +1239,14 @@ for (i in 1:nrow(ling.visit)){
 Getting distribution of observations for chi-squared test
 ```{r}
 ling.tab=
-  as.vector(table(ling.visit$octopus,ling.visit$daynight))
+  as.vector(table(ling.visit$octopus))
 ```
 
 
 Setting up probabilities for chi-squared test
 ```{r}
 ling.probs=
-  c(
-    c(min.absent/(min.absent+min.present),min.present/(min.absent+min.present))*mean(ling.visit$day_expected),
-    c(min.absent/(min.absent+min.present),min.present/(min.absent+min.present))*(1-mean(ling.visit$day_expected))
-  )
+  c(min.absent/(min.absent+min.present),min.present/(min.absent+min.present))
 ```
 
 Running chi-squared test
@@ -1265,10 +1258,9 @@ ling.chi
 Plotting chi-squared residuals
 ```{r}
 ling.res=matrix(ling.chi$residuals,ncol=2)
-colnames(ling.res)=c("day","night")
-rownames(ling.res)=c("octopus absent","octopus present")
+colnames(ling.res)=c("octopus absent","octopus present")
 
-corrplot(ling.res,is.cor=F,col.lim=c(-10,10))
+corrplot(ling.res,is.cor=F,col.lim=c(-5,5))
 ```
 
 Testing my assumptions for T-Test
@@ -1472,17 +1464,14 @@ for (i in 1:nrow(rock.visit)){
 Getting distribution of observations for chi-squared test
 ```{r}
 rock.tab=
-  as.vector(table(rock.visit$octopus,rock.visit$daynight))
+  as.vector(table(rock.visit$octopus))
 ```
 
 
 Setting up probabilities for chi-squared test
 ```{r}
 rock.probs=
-  c(
-    c(min.absent/(min.absent+min.present),min.present/(min.absent+min.present))*mean(rock.visit$day_expected),
-    c(min.absent/(min.absent+min.present),min.present/(min.absent+min.present))*(1-mean(rock.visit$day_expected))
-  )
+  c(min.absent/(min.absent+min.present),min.present/(min.absent+min.present))
 ```
 
 Running chi-squared test
@@ -1494,10 +1483,9 @@ rock.chi
 Plotting chi-squared residuals
 ```{r}
 rock.res=matrix(rock.chi$residuals,ncol=2)
-colnames(rock.res)=c("day","night")
-rownames(rock.res)=c("octopus absent","octopus present")
+colnames(rock.res)=c("octopus absent","octopus present")
 
-corrplot(rock.res,is.cor=F,col.lim=c(-10,10))
+corrplot(rock.res,is.cor=F,col.lim=c(-5,5))
 ```
 
 Testing my assumptions for T-Test
@@ -1702,17 +1690,14 @@ for (i in 1:nrow(crab.visit)){
 Getting distribution of observations for chi-squared test
 ```{r}
 crab.tab=
-  as.vector(table(crab.visit$octopus,crab.visit$daynight))
+  as.vector(table(crab.visit$octopus))
 ```
 
 
 Setting up probabilities for chi-squared test
 ```{r}
 crab.probs=
-  c(
-    c(min.absent/(min.absent+min.present),min.present/(min.absent+min.present))*mean(crab.visit$day_expected),
-    c(min.absent/(min.absent+min.present),min.present/(min.absent+min.present))*(1-mean(crab.visit$day_expected))
-  )
+  c(min.absent/(min.absent+min.present),min.present/(min.absent+min.present))
 ```
 
 Running chi-squared test
@@ -1724,8 +1709,7 @@ crab.chi
 Plotting chi-squared residuals
 ```{r}
 crab.res=matrix(crab.chi$residuals,ncol=2)
-colnames(crab.res)=c("day","night")
-rownames(crab.res)=c("octopus absent","octopus present")
+colnames(crab.res)=c("octopus absent","octopus present")
 
 corrplot(crab.res,is.cor=F,col.lim=c(-10,10))
 crab.res
@@ -1740,7 +1724,7 @@ bartlett.test(crab.visit$duration,crab.visit$octopus)
 
 Assumptions fail, so I am using a permutation two-sample test.
 ```{r crab permTS}
-permTS(crab.visit$duration[crab.visit$octopus=="absent"],crab.visit$duration[crab.visit$octopus=="present"],
+crab.permTS=permTS(crab.visit$duration[crab.visit$octopus=="absent"],crab.visit$duration[crab.visit$octopus=="present"],
        alternative="two.sided",method="exact.mc",control=permControl(nmc=10000))
 
 ```
@@ -1970,17 +1954,14 @@ for (i in 1:nrow(octo.visit)){
 Getting distribution of observations for chi-squared test
 ```{r}
 octo.tab=
-  as.vector(table(octo.visit$resident,octo.visit$daynight))
+  as.vector(table(octo.visit$resident))
 ```
 
 
 Setting up probabilities for chi-squared test
 ```{r}
 octo.probs=
-  c(
-    c(min.res.absent/(min.res.absent+min.res.present),min.res.present/(min.res.absent+min.res.present))*mean(octo.visit$day_expected),
-    c(min.res.absent/(min.res.absent+min.res.present),min.res.present/(min.res.absent+min.res.present))*(1-mean(octo.visit$day_expected))
-  )
+  c(min.res.absent/(min.res.absent+min.res.present),min.res.present/(min.res.absent+min.res.present))
 ```
 
 Running chi-squared test
@@ -1992,10 +1973,9 @@ octo.chi
 Plotting chi-squared residuals
 ```{r}
 octo.res=matrix(octo.chi$residuals,ncol=2)
-colnames(octo.res)=c("day","night")
-rownames(octo.res)=c("octopus absent","octopus present")
+colnames(octo.res)=c("octopus absent","octopus present")
 
-corrplot(octo.res,is.cor=F,col.lim=c(-10,10))
+corrplot(octo.res,is.cor=F,col.lim=c(-5,5))
 ```
 
 Testing my assumptions for T-Test
@@ -2155,114 +2135,159 @@ octo_visit_duration_cowplot
 
 ```{r}
 all.res=
-  rbind(
+  cbind(
     kelpie.res,
     ling.res,
     rock.res,
-    crab.res
+    crab.res,
+    octo.res
   )
 
 
 ```
 
+```{r}
+all.chi.p=
+  cbind(
+    kelpie.chi$p.value,
+    ling.chi$p.value,
+    rock.chi$p.value,
+    crab.chi$p.value,
+    octo.chi$p.value
+  )
+
+```
+
+
 
 ```{r}
-all.res=t(all.res)
-colnames(all.res)=rep("",8)
-sets=c("ling.visit","rock.visit","crab.visit")
+colnames(all.res)=rep("",ncol(all.res))
+rownames(all.res)=rep("",nrow(all.res))
+#all.res=t(all.res)
+#colnames(all.res)=rep("",2)
+#sets=c("ling.visit","rock.visit","crab.visit")
+```
+
+```{r}
+corrplot(all.res,is.cor=F,col.lim=c(-5,5),tl.col="black",addCoef.col = "black",cl.pos=F,axes=F,addgrid.col=NA)
 ```
 
 
 ```{r Interspecifc Interaction plot}
-svg(filename="allchi.svg",width=7,height=7)
+svg(filename="allchi.svg",width=9,height=7)
 plot(c(0,1),c(0,1),type="n",axes=F,ylab="",xlab="")
 
 
-par(fig=c(0.05,0.95,0,0.5),new=T)
+par(fig=c(0.076,0.957,0,0.5),new=T)
 
-corrplot(all.res,is.cor=F,col.lim=c(-10,10),tl.col="black",addCoef.col = "black",cl.pos=F,axes=F)
-for (i in c(0,2,4,6)){
-  lines(c(.5+i,.5+i,2.5+i,2.5+i,.5+i),c(.5,2.5,2.5,.5,.5),lwd=3)  
+corrplot(all.res,is.cor=F,col.lim=c(-5,5),tl.col="black",addCoef.col = "black",cl.pos=F,addgrid.col=NA)
+for (i in c(0,2,4,6,8)){
+  lines(c(.5+i,.5+i,2.5+i,2.5+i,.5+i),c(.5,1.9,1.9,.5,.5),lwd=3)  
 }
 
-for (i in 0:3){
+for (i in 0:4){
   text(2*i+1.15,0.4,"absent",srt=90,pos=2)
   text(2*i+2.15,0.4,"present",srt=90,pos=2)
 }
-text.x=2.7
-text.x2=3
-text.cex=1
-#text(text.x,7.5,"kelp greenling",srt=90,cex=text.cex)
-#text(text.x,5.5,"lingcod",srt=90,cex=text.cex)
-#text(text.x,3.5,"rockfish",srt=90,cex=text.cex)
-#text(text.x,1.5,"red rock crab",srt=90,cex=text.cex)
+
+for (i in 0:4){
+  if (all.chi.p[i+1]<=0.05){
+    lines(c((i*2)+1,(i*2)+2),c(1.5,1.5),lwd=2)
+    text((i*2)+1.5,1.7,paste("p=",format(signif(all.chi.p[i+1],2),scientific=F),sep=""))
+  }
+}
+
 
 start=0.001
-box.width=0.395-0.014
-box.next=0.219-0.014
+box.width=0.310
+box.next=0.171
+lower.box.bottom=0.21
+lower.box.top=0.8
+upper.box.bottom=0.536
+upper.box.top=1
 bottom.max=0.7
 top.min=0.7
 top.max=100
 top.at=c(1)
 top.log="y"
 
-par(fig=c(start,start+box.width,0.22,.8),new=T)
+par(fig=c(start,start+box.width,lower.box.bottom,lower.box.top),new=T)
 boxplot(duration~octopus,data=kelpie.visit,range=0,ylim=c(0,bottom.max),axes=F,ylab="",xlab="")
 axis(2,at=c(0,0.3,0.6),las=1)
 box(lwd=3)
 text(1,mean(kelpie.visit$duration[kelpie.visit$octopus=="absent"]),"+",cex=2)
 text(2,mean(kelpie.visit$duration[kelpie.visit$octopus=="present"]),"+",cex=2)
 
-par(fig=c(start,start+box.width,0.536,1),new=T)
+par(fig=c(start,start+box.width,upper.box.bottom,upper.box.top),new=T)
 boxplot(duration~octopus,data=kelpie.visit,range=0,ylim=c(top.min,top.max),axes=F,ylab="",xlab="",log=top.log)
 axis(2,at=c(1,10,100),labels=c("1","10","100"),las=1)
 box(lwd=3)
 if (kelpie.permTS$p.value<=0.05){
   lines(c(1,2),c(exp(log(max(kelpie.visit$duration))+0.5),exp(log(max(kelpie.visit$duration))+0.5)),lwd=2)
-  text(1.5,exp(log(max(kelpie.visit$duration))+1),paste("p=",format(signif(kelpie.permTS$p.value,1),scientific = F),sep=""))
+  text(1.5,exp(log(max(kelpie.visit$duration))+1),paste("p=",format(signif(kelpie.permTS$p.value,2),scientific = F),sep=""))
 
 }
 
 
-par(fig=c(start+box.next*1,start+box.next*1+box.width,0.22,.8),new=T)
+par(fig=c(start+box.next*1,start+box.next*1+box.width,lower.box.bottom,lower.box.top),new=T)
 boxplot(duration~octopus,data=ling.visit,range=0,ylim=c(0,bottom.max),axes=F,ylab="",xlab="")
 box(lwd=3)
 text(1,mean(ling.visit$duration[ling.visit$octopus=="absent"]),"+",cex=2)
 text(2,mean(ling.visit$duration[ling.visit$octopus=="present"]),"+",cex=2)
 
-par(fig=c(start+box.next*1,start+box.next*1+box.width,0.536,1),new=T)
+par(fig=c(start+box.next*1,start+box.next*1+box.width,upper.box.bottom,upper.box.top),new=T)
 boxplot(duration~octopus,data=ling.visit,range=0,ylim=c(top.min,top.max),axes=F,ylab="",xlab="",log=top.log)
 box(lwd=3)
 if (ling.permTS$p.value<=0.05){
   lines(c(1,2),c(exp(log(max(ling.visit$duration))+0.5),exp(log(max(ling.visit$duration))+0.5)),lwd=2)
-  text(1.5,exp(log(max(ling.visit$duration))+1),paste("p=",format(signif(ling.permTS$p.value,1),scientific=F),sep=""))
+  text(1.5,exp(log(max(ling.visit$duration))+1),paste("p=",format(signif(ling.permTS$p.value,2),scientific=F),sep=""))
 }
 
 
-par(fig=c(start+box.next*2,start+box.next*2+box.width,0.22,.8),new=T)
+par(fig=c(start+box.next*2,start+box.next*2+box.width,lower.box.bottom,lower.box.top),new=T)
 boxplot(duration~octopus,data=rock.visit,range=0,ylim=c(0,bottom.max),axes=F,ylab="",xlab="")
 box(lwd=3)
 text(1,mean(rock.visit$duration[rock.visit$octopus=="absent"]),"+",cex=2)
 text(2,mean(rock.visit$duration[rock.visit$octopus=="present"]),"+",cex=2)
 
-par(fig=c(start+box.next*2,start+box.next*2+box.width,0.536,1),new=T)
+par(fig=c(start+box.next*2,start+box.next*2+box.width,upper.box.bottom,upper.box.top),new=T)
 boxplot(duration~octopus,data=rock.visit,range=0,ylim=c(top.min,top.max),axes=F,ylab="",xlab="",log=top.log)
 box(lwd=3)
 if (rock.permTS$p.value<=0.05){
   lines(c(1,2),c(exp(log(max(rock.visit$duration))+0.5),exp(log(max(rock.visit$duration))+0.5)),lwd=2)
-  text(1.5,exp(log(max(rock.visit$duration))+1),paste("p=",format(signif(rock.permTS$p.value,1),scientific=F),sep=""))
+  text(1.5,exp(log(max(rock.visit$duration))+1),paste("p=",format(signif(rock.permTS$p.value,2),scientific=F),sep=""))
 }
 
 
-par(fig=c(start+box.next*3,start+box.next*3+box.width,0.22,.8),new=T)
+par(fig=c(start+box.next*3,start+box.next*3+box.width,lower.box.bottom,lower.box.top),new=T)
 boxplot(duration~octopus,data=crab.visit,range=0,ylim=c(0,bottom.max),axes=F,ylab="",xlab="")
 box(lwd=3)
 
-par(fig=c(start+box.next*3,start+box.next*3+box.width,0.536,1),new=T)
+par(fig=c(start+box.next*3,start+box.next*3+box.width,upper.box.bottom,upper.box.top),new=T)
 boxplot(duration~octopus,data=crab.visit,range=0,ylim=c(top.min,top.max),axes=F,ylab="",xlab="",log=top.log)
 box(lwd=3)
+if (crab.permTS$p.value<=0.05){
+  lines(c(1,2),c(exp(log(max(crab.visit$duration))+0.5),exp(log(max(crab.visit$duration))+0.5)),lwd=2)
+  text(1.5,exp(log(max(crab.visit$duration))+1),paste("p=",format(signif(crab.permTS$p.value,2),scientific=F),sep=""))
+}
 text(1,mean(crab.visit$duration[crab.visit$octopus=="absent"]),"+",cex=2)
 text(2,mean(crab.visit$duration[crab.visit$octopus=="present"]),"+",cex=2)
+
+
+par(fig=c(start+box.next*4,start+box.next*4+box.width,lower.box.bottom,lower.box.top),new=T)
+boxplot(duration~resident,data=octo.visit,range=0,ylim=c(0,bottom.max),axes=F,ylab="",xlab="")
+box(lwd=3)
+
+par(fig=c(start+box.next*4,start+box.next*4+box.width,upper.box.bottom,upper.box.top),new=T)
+boxplot(duration~resident,data=octo.visit,range=0,ylim=c(top.min,top.max),axes=F,ylab="",xlab="",log=top.log)
+box(lwd=3)
+if (octo.permTS$p.value<=0.05){
+  lines(c(1,2),c(exp(log(max(octo.visit$duration))+0.5),exp(log(max(octo.visit$duration))+0.5)),lwd=2)
+  text(1.5,exp(log(max(octo.visit$duration))+1),paste("p=",format(signif(octo.permTS$p.value,2),scientific=F),sep=""))
+}
+text(1,mean(octo.visit$duration[octo.visit$resident=="absent"]),"+",cex=2)
+text(2,mean(octo.visit$duration[octo.visit$resident=="present"]),"+",cex=2)
+
 
 species.line1=1
 species.line2=2
@@ -2271,16 +2296,19 @@ n.line=0
 par(fig=c(0,1,0,1),new=T)
 plot(c(0,1),c(0,1),type="n",axes=F,ylab="",xlab="")
 mtext("Visit duration (min)",side=2,line=2.5,cex=1.5,adj=0.7)
-mtext(paste("n=",nrow(kelpie.visit),sep=""),side=3,line=n.line,cex=1,adj=0.09)
+mtext(paste("n=",nrow(kelpie.visit),sep=""),side=3,line=n.line,cex=1,adj=0.08)
 mtext("decagrammus",side=3,line=species.line1,cex=1,adj=0.05,font=3)
 mtext("Hexagrammos",side=3,line=species.line2,cex=1,adj=0.05,font=3)
-mtext(paste("n=",nrow(ling.visit),sep=""),side=3,line=n.line,cex=1,adj=0.37)
-mtext("elongatus",side=3,line=species.line1,cex=1,adj=0.36,font=3)
-mtext("Ophiodon",side=3,line=species.line2,cex=1,adj=0.36,font=3)
-mtext(paste("n=",nrow(rock.visit),sep=""),side=3,line=n.line,cex=1,adj=0.63)
-mtext("Sebastes sp.",side=3,line=species.line1,cex=1,adj=0.63,font=3)
-mtext(paste("n=",nrow(crab.visit),sep=""),side=3,line=n.line,cex=1,adj=0.9)
-mtext("Cancer productus",side=3,line=species.line1,cex=1,adj=0.97,font=3)
+mtext(paste("n=",nrow(ling.visit),sep=""),side=3,line=n.line,cex=1,adj=0.28)
+mtext("elongatus",side=3,line=species.line1,cex=1,adj=0.27,font=3)
+mtext("Ophiodon",side=3,line=species.line2,cex=1,adj=0.27,font=3)
+mtext(paste("n=",nrow(rock.visit),sep=""),side=3,line=n.line,cex=1,adj=0.5)
+mtext("Sebastes sp.",side=3,line=species.line1,cex=1,adj=0.5,font=3)
+mtext(paste("n=",nrow(crab.visit),sep=""),side=3,line=n.line,cex=1,adj=0.71)
+mtext("Cancer productus",side=3,line=species.line1,cex=1,adj=0.73,font=3)
+mtext(paste("n=",nrow(octo.visit),sep=""),side=3,line=n.line,cex=1,adj=0.92)
+mtext("Octopus rubescens",side=3,line=species.line1,cex=1,adj=0.99,font=3)
+mtext("non-resident",side=3,line=species.line2,cex=1,adj=0.95,font=3)
 mtext("octopus present or absent",side=1,line=3.5,cex=1.5)
 dev.off()
 ```
