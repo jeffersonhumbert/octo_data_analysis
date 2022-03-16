@@ -2432,3 +2432,72 @@ daynight.samp=c(sum(sample(octos[daynight=="night"]>0,606)),sum(sample(octos[day
 chisq.test(daynight.samp)
 ```
 The frequency of octopus encounters is not significantly different between day and night.
+
+# frequency of periscoping and fortifying when 1 octopus is around versus multiple
+
+```{r}
+octo.one=sum(octos.present$duration[octos.present$number==1])
+octo.more=sum(octos.present$duration[octos.present$number>1]*octos.present$number[octos.present$number>1])
+octo.one
+octo.more
+```
+
+## 
+```{r}
+perifort.probs=c(octo.one/(octo.one+octo.more),octo.more/(octo.one+octo.more))
+perifort.probs
+```
+
+
+## Finding number of fortify events with 1 octopus present versus more than 1
+```{r finding fortify }
+fort=numeric()
+
+for (i in 1:nrow(octos.present)){
+  fort[i]=sum(events$Behavior=="fortify"&
+    events$`Deployment #`==octos.present$`Deployment #`[i]&
+    events$realtime>octos.present$realtime[i]&
+    events$realtime<octos.present$endtime[i])
+}
+
+fort.none=sum(fort[octos.present$number==0]) #negative control... kinda...
+fort.one=sum(fort[octos.present$number==1])
+fort.more=sum(fort[octos.present$number>1])
+fort.none
+fort.one
+fort.more
+```
+
+```{r}
+chisq.test(c(fort.one,fort.more),p=perifort.probs)
+```
+
+
+## Finding number of periscope events with 1 octopus present versus more than 1
+```{r}
+peri=numeric()
+
+for (i in 1:nrow(octos.present)){
+  peri[i]=sum(events$Behavior=="periscope"&
+    events$Species=="octopus_rubescens"&
+    events$`Deployment #`==octos.present$`Deployment #`[i]&
+    events$realtime>octos.present$realtime[i]&
+    events$realtime<octos.present$endtime[i])
+}
+
+peri.none=sum(peri[octos.present$number==0]) #negative control... kinda...
+peri.one=sum(peri[octos.present$number==1])
+peri.more=sum(peri[octos.present$number>1])
+peri.none
+peri.one
+peri.more
+```
+
+```{r}
+peri.multi.chi=chisq.test(c(peri.one,peri.more),p=perifort.probs)
+peri.multi.chi
+```
+
+
+
+
