@@ -610,6 +610,7 @@ DayHist(events$realtime[events$Species=="octopus_rubescens"&events$Behavior=="fo
 rasterImage(moon,-0.15,0.6,0.15,0.9)
 rasterImage(sun,-0.15,-0.6,0.15,-0.9)
 mtext("Fortification",side=3,line=1.5,cex=1.5)
+mtext("A",side=3,line=1.5,cex=2,adj=0)
 
 if(fort.chi$p.value>0.0001){
   mtext(paste("n=",nrow(events[events$Species=="octopus_rubescens"&events$Behavior=="fortify",]),
@@ -626,7 +627,8 @@ DayHist(events$realtime[events$Species=="octopus_rubescens"&events$Behavior=="fr
         night.col="lightskyblue3")
 rasterImage(moon,-0.15,0.6,0.15,0.9)
 rasterImage(sun,-0.15,-0.6,0.15,-0.9)
-mtext("Frame departures",side=3,line=1.5,cex=1.5)
+mtext("B",side=3,line=1.5,cex=2,adj=0)
+mtext("Departures",side=3,line=1.5,cex=1.5)
 
 if(depart.chi$p.value>0.0001){
   mtext(paste("n=",nrow(events[events$Species=="octopus_rubescens"&events$Behavior=="frame_departure",]),
@@ -643,6 +645,7 @@ DayHist(events$realtime[events$Species=="octopus_rubescens"&events$Behavior=="pe
         night.col="lightskyblue3")
 rasterImage(moon,-0.15,0.6,0.15,0.9)
 rasterImage(sun,-0.15,-0.6,0.15,-0.9)
+mtext("C",side=3,line=1.5,cex=2,adj=0)
 mtext("Periscoping",side=3,line=1.5,cex=1.5)
 
 if(peri.chi$p.value>0.0001){
@@ -661,6 +664,7 @@ DayHist(events$realtime[events$Species=="octopus_rubescens"&events$Behavior=="en
         night.col="lightskyblue3")
 rasterImage(moon,-0.15,0.6,0.15,0.9)
 rasterImage(sun,-0.15,-0.6,0.15,-0.9)
+mtext("D",side=3,line=1.5,cex=2,adj=0)
 mtext("Enter/exit bottle",side=3,line=1.5,cex=1.5)
 if(enterexit.chi$p.value>0.0001){
   mtext(paste("n=",nrow(events[events$Species=="octopus_rubescens"&events$Behavior=="enter_bottle"|events$Species=="octopus_rubescens"&events$Behavior=="exit_bottle",]),
@@ -674,6 +678,10 @@ if(enterexit.chi$p.value>0.0001){
 
 dev.off()
 
+```
+
+```{bash}
+cairosvg timing.svg -o timing.png -d 100
 ```
 
 
@@ -2325,7 +2333,7 @@ all.res=
 
 ```{r}
 all.res=t(all.res)
-colnames(all.res)=rep("",2)
+colnames(all.res)=rep("",ncol(all.res))
 sets=c("octo.visit")
 all.res
 ```
@@ -2365,14 +2373,14 @@ top.at=c(1)
 top.log="y"
 
 par(fig=c(start,start+box.width,0.22,.8),new=T)
-boxplot(duration~octopus,data=octo.visit,range=0,ylim=c(0,bottom.max),axes=F,ylab="",xlab="")
+boxplot(duration~resident,data=octo.visit,range=0,ylim=c(0,bottom.max),axes=F,ylab="",xlab="")
 axis(2,at=c(0,0.3,0.6),las=1)
 box(lwd=3)
 text(1,mean(octo.visit$duration[octo.visit$octopus=="absent"]),"+",cex=2)
 text(2,mean(octo.visit$duration[octo.visit$octopus=="present"]),"+",cex=2)
 
 par(fig=c(start,start+box.width,0.536,1),new=T)
-boxplot(duration~octopus,data=octo.visit,range=0,ylim=c(top.min,top.max),axes=F,ylab="",xlab="",log=top.log)
+boxplot(duration~resident,data=octo.visit,range=0,ylim=c(top.min,top.max),axes=F,ylab="",xlab="",log=top.log)
 axis(2,at=c(1,10,100),labels=c("1","10","100"),las=1)
 box(lwd=3)
 if (kelpie.permTS$p.value<=0.05){
@@ -2429,7 +2437,8 @@ for (i in 1:length(dates)){
 Sampling 606 night times and 606 day times to see if an octopus is present
 ```{r}
 daynight.samp=c(sum(sample(octos[daynight=="night"]>0,606)),sum(sample(octos[daynight=="day"]>0,606)))
-chisq.test(daynight.samp)
+daynight.samp.chi=chisq.test(daynight.samp)
+daynight.samp.chi
 ```
 The frequency of octopus encounters is not significantly different between day and night.
 
@@ -2469,7 +2478,8 @@ fort.more
 ```
 
 ```{r}
-chisq.test(c(fort.one,fort.more),p=perifort.probs)
+fort.multi.chi=chisq.test(c(fort.one,fort.more),p=perifort.probs)
+fort.multi.chi
 ```
 
 
@@ -2497,6 +2507,103 @@ peri.more
 peri.multi.chi=chisq.test(c(peri.one,peri.more),p=perifort.probs)
 peri.multi.chi
 ```
+
+
+# Chi square residuals plots
+
+```{r}
+
+
+
+
+daynight.samp.plot=t(as.matrix(daynight.samp.chi$residuals))
+colnames(daynight.samp.plot)=c("","")
+rownames(daynight.samp.plot)=""
+
+
+perifort.plot=as.matrix(rbind(fort.multi.chi$residuals,
+peri.multi.chi$residuals))
+colnames(perifort.plot)=c("","")
+rownames(perifort.plot)=c("","")
+```
+
+```{r}
+testcorr=rbind(daynight.samp.plot,c(NA,NA),perifort.plot,c(NA,NA),octo.res)
+corrplot(testcorr,is.cor=F,tl.col="black",addCoef.col = "black",cl.pos=F,addgrid.col=NA,col.lim=c(-5,5),bg="#00000000")
+```
+```{r}
+paste0("p=",signif(daynight.samp.chi$p.value,digits=2))
+```
+
+
+```{r}
+svg(filename="chis.svg",width=7,height=15)
+par(fig=c(0,1,0.1,0.95))
+corrplot(testcorr,is.cor=F,tl.col="black",addCoef.col="black",addgrid.col=NA,col.lim=c(-5,5),
+#         cl.cex=1.5,cl.ratio=0.3
+          cl.pos="n"
+         )
+for (i in c(0,2,3,5)){
+  lines(c(.5,.5,2.5,2.5,.5),c(.5+i,1.5+i,1.5+i,.5+i,.5+i),lwd=3)  
+}
+
+#for (i in 1:nrow(testcorr)){
+#  for (j in 1:ncol(testcorr)){
+#    if (!is.na(testcorr[i,j])){
+#      text(j,7-i,signif(testcorr[i,j],digits=2),col="red")
+#    }
+#  }
+#}
+
+axis(1,at=c(1,2),lwd=0,labels = c("present","absent"),cex.axis=2,padj=3.5)
+points(c(1,2,1,2),c(2,2,5,5),pch=21,bg="white",col="white",cex=3) # a real janky way to hide the questions marks
+
+
+text(c(1,2),c(5.35,5.35),c("day","night"),cex=2)
+text(c(1,2),c(2.35,2.35),c("1",">1"),cex=2)
+text(c(1.5),c(2.1),c("octopuses in frame"),cex=2)
+mtext("resident octopus",side=1,cex=2,line=8)
+text(0.4,4,"fortify",srt=90,cex=2)
+text(0.4,3,"periscope",srt=90,cex=2)
+
+if (octo.chi$p.value>=0.001){
+  text(1.5,1.4,paste0("p=",signif(octo.chi$p.value,digits=2)),cex=1.5)
+} else (text(1.5,1.4,"p<0.001",cex=1.5))
+
+if (peri.multi.chi$p.value>=0.001){
+  text(1.5,3.4,paste0("p=",signif(peri.multi.chi$p.value,digits=2)),cex=1.5)
+} else (text(1.5,3.4,"p<0.001",cex=1.5))
+if (fort.multi.chi$p.value>=0.001){
+  text(1.5,4.4,paste0("p=",signif(fort.multi.chi$p.value,digits=2)),cex=1.5)
+} else (text(1.5,4.4,"p<0.001",cex=1.5))
+if (daynight.samp.chi$p.value>=0.001){
+  mtext(paste0("p=",signif(daynight.samp.chi$p.value,digits=2)),side=3,line=1.7,cex=1.5)
+} else (mtext("p<0.001",side=3,line=1.7,cex=1.5))
+
+mtext("A",side=3,line=3.2,cex=4,adj=0.2)
+text(0.53,4.64,"B",cex=4)
+text(0.53,1.64,"C",cex=4)
+
+
+#mtext("Pearson residuals",side=4,cex=2,line=-3)
+#text(0.2,6,"A",cex=3)
+
+
+dev.off()
+
+
+```
+
+```{bash}
+cairosvg chis.svg -o chis.png -d 300
+```
+
+
+
+
+
+
+
 
 
 
