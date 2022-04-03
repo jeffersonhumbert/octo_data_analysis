@@ -5,7 +5,7 @@ date: "11/4/2021"
 output: html_document
 ---
 
-```{r Installing Libraries}
+```{r Loading Libraries}
 library(remotes)
 #install_github("KirtOnthank/CircularTimeHistogram")
 library(CircularTimeHistogram)
@@ -684,6 +684,9 @@ dev.off()
 cairosvg timing.svg -o timing.png -d 100
 ```
 
+```{bash}
+inkscape timing.svg -o Figure2.eps --export-ignore-filters --export-ps-level=3
+```
 
 
 # Interspecific Interaction Analysis
@@ -781,6 +784,27 @@ min.present=sum(octos.present$duration[octos.present$number>0])
 min.absent
 min.present
 ```
+
+Finding the proportion of times when octopuses are present, in which there is more than one octopus present.
+```{r}
+sum(octos.present$duration[octos.present$number>=1])
+sum(octos.present$duration[octos.present$number>1])
+```
+
+
+```{r}
+sum(octos.present$duration[octos.present$number>1])/sum(octos.present$duration[octos.present$number>=1])
+```
+
+FInding total number of conspecific interactions
+```{r}
+sum(octos.present$number>=2)
+```
+Finding the total number of hours that the cameras were deployed
+```{r}
+sum(octos.present$duration)/60
+```
+
 
 ## Finding times where there are no Resident octopuses present
 This is just an adaptation of the code above that finds times when octopuses are present or not, just adapted for resident octopuses.
@@ -1043,6 +1067,11 @@ colnames(kelpie.res)=c("octopus absent","octopus present")
 corrplot(kelpie.res,is.cor=F,col.lim=c(-5,5))
 ```
 
+Getting Kelpie observations per hour
+```{r}
+kelpie.tab[1]/(min.absent/60/24)
+kelpie.tab[2]/(min.present/60/24)
+```
 
 
 Testing my assumptions for T-Test
@@ -1060,9 +1089,9 @@ kelpie.permTS
 ```
 Very significant!
 
-Seeing what the mean difference is between kelp greenling visit duration when octopuses are absent versus octopuses are present.
+Seeing what the mean difference in seconds is between kelp greenling visit duration when octopuses are absent versus octopuses are present.
 ```{r}
-aggregate(duration~octopus,data=kelpie.visit,FUN="mean")
+aggregate(duration*60~octopus,data=kelpie.visit,FUN="mean")
 ```
 Plotting the data.
 ```{r kelpie raw boxplot}
@@ -1090,6 +1119,7 @@ mtext("Visit duration (min)",side=2,line=2.5,cex=1.5)
 
 dev.off()
 ```
+
 ```{bash}
 cairosvg Kelpy_visitation_duration.svg -o Kelpy_visitation_duration.png -d 300
 ```
@@ -1316,6 +1346,7 @@ mtext("Visit duration (min)",side=2,line=2.5,cex=1.5)
 
 dev.off()
 ```
+
 ```{bash}
 cairosvg Lingcod_visitation_duration.svg -o Lingcod_visitation_duration.png -d 300
 ```
@@ -1916,6 +1947,45 @@ octo.visit=octo.visit[!octo.visit$resident=="unknown",]
 ```
 
 
+
+
+Adding if each octo visit was during the day or the night
+```{r}
+octo.visit$daynight="night"
+octo.visit$day_expected=0
+
+for (i in 1:nrow(octo.visit)){
+  sunrise=sunriset(bay, as.POSIXct(octo.visit$time[i]), direction="sunrise", POSIXct.out=TRUE)$time
+  sunset=sunriset(bay,  as.POSIXct(octo.visit$time[i]), direction="sunset", POSIXct.out=TRUE)$time
+  if (octo.visit$time[i]>sunrise&octo.visit$time[i]<sunset) {
+    octo.visit$daynight[i]="day"
+  }
+  octo.visit$day_expected[i]=as.numeric(difftime(sunset,sunrise,units="hours"))/24
+}
+```
+
+Getting distribution of observations for chi-squared test
+```{r}
+octo.tab=
+  as.vector(table(octo.visit$resident))
+#  table(octo.visit$reach[octo.visit$resident=="present"])
+octo.tab
+```
+
+
+Setting up probabilities for chi-squared test
+```{r}
+octo.probs=
+#c(16/(16+12),12/(16+12))
+    c(min.res.absent/(min.res.absent+min.res.present),min.res.present/(min.res.absent+min.res.present))
+octo.probs
+```
+
+Running chi-squared test
+```{r octo-res/nonres chi}
+octo.chi=chisq.test(octo.tab)
+octo.chi
+```
 ### Does each octopus touch or reach inside bottle
 ```{r checking behaviors}
 table(events$Behavior[events$Species=="octopus_rubescens"])
@@ -1943,49 +2013,27 @@ for (i in 1:nrow(octo.visit)){
 table(octo.visit$resident,octo.visit$reach)
 ```
 
-
-Adding if each octo visit was during the day or the night
-```{r}
-octo.visit$daynight="night"
-octo.visit$day_expected=0
-
-for (i in 1:nrow(octo.visit)){
-  sunrise=sunriset(bay, as.POSIXct(octo.visit$time[i]), direction="sunrise", POSIXct.out=TRUE)$time
-  sunset=sunriset(bay,  as.POSIXct(octo.visit$time[i]), direction="sunset", POSIXct.out=TRUE)$time
-  if (octo.visit$time[i]>sunrise&octo.visit$time[i]<sunset) {
-    octo.visit$daynight[i]="day"
-  }
-  octo.visit$day_expected[i]=as.numeric(difftime(sunset,sunrise,units="hours"))/24
-}
-```
-
 Getting distribution of observations for chi-squared test
 ```{r}
-octo.tab=
-  as.vector(table(octo.visit$resident))
+reach.tab=
+  table(octo.visit$reach[octo.visit$resident=="present"])
+reach.tab
 ```
 
 
 Setting up probabilities for chi-squared test
 ```{r}
-octo.probs=
-  c(min.res.absent/(min.res.absent+min.res.present),min.res.present/(min.res.absent+min.res.present))
+reach.probs=c(16/(16+12),12/(16+12))
+reach.probs
 ```
 
 Running chi-squared test
 ```{r octo-res/nonres chi}
-octo.chi=chisq.test(octo.tab,p=octo.probs)
-octo.chi
+reach.chi=chisq.test(reach.tab)
+reach.chi
 ```
 
-Plotting chi-squared residuals
-```{r}
-octo.res=matrix(octo.chi$residuals,ncol=2)
-colnames(octo.res)=c("octopus absent","octopus present")
-
-corrplot(octo.res,is.cor=F,col.lim=c(-5,5))
-```
-
+### T-test of non-resident octopus visit duration
 Testing my assumptions for T-Test
 ```{r}
 shapiro.test(octo.visit$duration[octo.visit$resident=="present"])
@@ -2205,7 +2253,7 @@ lower.box.top=0.8
 upper.box.bottom=0.536
 upper.box.top=1
 bottom.max=0.7
-top.min=0.7
+top.min=0.82
 top.max=100
 top.at=c(1)
 top.log="y"
@@ -2314,6 +2362,10 @@ dev.off()
 
 ```{bash}
 cairosvg allchi.svg -o allchi.png -d 300
+```
+
+```{bash}
+inkscape allchi.svg -o Figure3.eps --export-ignore-filters --export-ps-level=3
 ```
 
 
@@ -2434,9 +2486,9 @@ for (i in 1:length(dates)){
 
 ```
 
-Sampling 606 night times and 606 day times to see if an octopus is present
+Sampling 612 night times and 612 day times to see if an octopus is present
 ```{r}
-daynight.samp=c(sum(sample(octos[daynight=="night"]>0,606)),sum(sample(octos[daynight=="day"]>0,606)))
+daynight.samp=c(sum(sample(octos[daynight=="night"]>0,612)),sum(sample(octos[daynight=="day"]>0,612)))
 daynight.samp.chi=chisq.test(daynight.samp)
 daynight.samp.chi
 ```
@@ -2598,6 +2650,9 @@ dev.off()
 cairosvg chis.svg -o chis.png -d 300
 ```
 
+```{bash}
+inkscape chis.svg -o Figure4.eps --export-ignore-filters --export-ps-level=3
+```
 
 
 
