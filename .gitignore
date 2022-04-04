@@ -2,5 +2,8 @@
 .Rhistory
 .RData
 .Ruserdata
-Redrockcrab_visitation_duration.svg
-Rockfish_visitation_duration.svg
+*.svg
+*.eps
+Figure2.png
+Figure3.png
+Figure4.png
