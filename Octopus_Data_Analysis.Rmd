@@ -1865,7 +1865,10 @@ octos=rep(octos.present$number[1],length(times))
 
 for (i in 2:nrow(octos.present)){
   times=c(times,seq(from=octos.present$realtime[i],to=octos.present$endtime[i],by="1 min"))
-  octos=c(octos,rep(octos.present$number[i],length(seq(from=octos.present$realtime[i],to=octos.present$endtime[i],by="1 min"))))
+  octos=c(octos,
+          rep(octos.present$number[i],
+          length(seq(from=octos.present$realtime[i],
+                     to=octos.present$endtime[i],by="1 min"))))
 }
 
 
@@ -1888,7 +1891,8 @@ for (i in 1:length(dates)){
 
 Sampling 612 night times and 612 day times to see if an octopus is present, and then comparing if the number of samples with an octopus is present is different between the two samples.  Essentially what we are trying to look at here: If you were to visit the octopus dens randomly 612 times during the night, or visit the octopus dens 612 times during the day, would you be more likely to encounter and octopus during the day or night?
 ```{r}
-daynight.samp=c(sum(sample(octos[daynight=="night"]>0,612)),sum(sample(octos[daynight=="day"]>0,612)))
+daynight.samp=c(sum(sample(octos[daynight=="night"]>0,612)),
+                sum(sample(octos[daynight=="day"]>0,612)))
 daynight.samp.chi=chisq.test(daynight.samp)
 daynight.samp.chi
 ```
@@ -1995,7 +1999,7 @@ for (i in c(0,2,3,5)){
 }
 
 
-axis(1,at=c(1,2),lwd=0,labels = c("present","absent"),cex.axis=2,padj=3.5)
+axis(1,at=c(1,2),lwd=0,labels = c("absent","present"),cex.axis=2,padj=3.5)
 points(c(1,2,1,2),c(2,2,5,5),pch=21,bg="white",col="white",cex=3) 
 # This code above is a real janky way to hide the questions marks
 
